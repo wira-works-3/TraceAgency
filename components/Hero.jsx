@@ -1,0 +1,111 @@
+"use client";
+
+import { motion, useScroll, useTransform } from "framer-motion";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
+
+export default function Hero() {
+  const { scrollY } = useScroll();
+  const y = useTransform(scrollY, [0, 1000], [0, 300]);
+  const opacity = useTransform(scrollY, [0, 500], [1, 0]);
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2,
+        delayChildren: 0.3,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } },
+  };
+
+  return (
+    <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden bg-background">
+      
+      {/* Background Video */}
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        <video 
+          autoPlay 
+          loop 
+          muted 
+          playsInline
+          className="absolute top-1/2 left-1/2 min-w-full min-h-full w-auto h-auto -translate-x-1/2 -translate-y-1/2 object-cover opacity-30"
+        >
+          {/* Dummy video - bisa diganti dengan video event nyata */}
+          <source src="https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4" type="video/mp4" />
+        </video>
+        
+        {/* Overlay gradient agar teks tetap terbaca */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background"></div>
+      </div>
+
+      <motion.div 
+        className="container mx-auto px-6 lg:px-8 max-w-5xl relative z-10 flex flex-col items-center text-center -mt-8 md:-mt-10"
+        style={{ y, opacity }}
+      >
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="flex flex-col items-center"
+        >
+          <motion.div variants={itemVariants} className="inline-block mb-6 px-4 py-1.5 rounded-full border border-border text-text-secondary text-xs font-semibold tracking-[0.2em] uppercase">
+            HR & EVENT AGENCY
+          </motion.div>
+          
+          <motion.h1 
+            variants={itemVariants}
+            className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-foreground leading-tight tracking-tighter mb-6"
+          >
+            Empowering events with <br />
+            <span className="text-text-secondary">exceptional talent.</span>
+          </motion.h1>
+          
+          <motion.p 
+            variants={itemVariants}
+            className="text-base md:text-lg text-text-secondary leading-relaxed mb-10 max-w-2xl font-light"
+          >
+            Kami menyediakan SPG, Usher, MC, dan Talent profesional untuk mensukseskan setiap event Anda.
+          </motion.p>
+          
+          <motion.div variants={itemVariants} className="flex flex-row gap-4 w-full sm:w-auto justify-center">
+            <Link 
+              href="#services"
+              className="px-6 py-4 rounded-full bg-foreground text-background text-sm md:text-base font-semibold hover:bg-gray-200 transition-all flex items-center justify-center flex-1 sm:flex-none min-w-[140px]"
+            >
+              Layanan Kami
+            </Link>
+            <Link 
+              href="#kontak"
+              className="px-6 py-4 rounded-full bg-surface text-foreground border border-border text-sm md:text-base font-semibold hover:bg-surface/80 transition-all flex items-center justify-center flex-1 sm:flex-none min-w-[140px]"
+            >
+              Hubungi Kami
+            </Link>
+          </motion.div>
+        </motion.div>
+      </motion.div>
+      
+      {/* Client Logos / Marquee at bottom of Hero */}
+      <div className="absolute bottom-10 left-0 w-full overflow-hidden flex flex-col items-center opacity-50">
+        <span className="text-[10px] text-text-secondary tracking-widest uppercase mb-4">They trusted us</span>
+        <div className="flex w-full whitespace-nowrap overflow-hidden">
+          <div className="animate-marquee flex gap-12 items-center px-6">
+            {/* Repeated logos for infinite scroll effect */}
+            {['Big Hersman', 'Armani Exchange', 'Pertamina', 'BEI / IDX', 'BCA', 'Digibank', 'Grab', 'Orangtua Group', 'Mayora', 'Teh Pucuk Harum', 'Pepsico', 'Hush Puppies', 'AEON Mall', 'Richs', 'Tigac', 'Blackjack'].map((logo, i) => (
+              <span key={i} className="text-xl font-bold text-text-secondary mix-blend-plus-lighter">{logo}</span>
+            ))}
+            {['Big Hersman', 'Armani Exchange', 'Pertamina', 'BEI / IDX', 'BCA', 'Digibank', 'Grab', 'Orangtua Group', 'Mayora', 'Teh Pucuk Harum', 'Pepsico', 'Hush Puppies', 'AEON Mall', 'Richs', 'Tigac', 'Blackjack'].map((logo, i) => (
+              <span key={`dup-${i}`} className="text-xl font-bold text-text-secondary mix-blend-plus-lighter">{logo}</span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
