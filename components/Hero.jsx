@@ -1,13 +1,78 @@
 "use client";
 
-import { motion, useScroll, useTransform } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 
 export default function Hero() {
   const { scrollY } = useScroll();
   const y = useTransform(scrollY, [0, 1000], [0, 300]);
   const opacity = useTransform(scrollY, [0, 500], [1, 0]);
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  const heroImages = useMemo(
+    () => [
+      "/Usher/Usher-1.jpg",
+      "/SPG/SPG-6.JPG",
+      "/SPG/SPG-1.JPG",
+      "/SPG/SPG-3.jpg",
+      "/Usher/Usher-2.JPG",
+      "/Usher/Usher-4.JPG"
+    ],
+    []
+  );
+
+  const imageObjectPositions = useMemo(
+    () => ({
+      "/Usher/Usher-1.jpg": "50% 18%",
+      "/Usher/Usher-2.JPG": "50% 18%",
+      "/Usher/Usher-4.JPG": "50% 18%",
+      "/SPG/SPG-6.JPG": "50% 20%",
+      "/SPG/SPG-1.JPG": "50% 20%",
+      "/SPG/SPG-3.jpg": "50% 20%"
+    }),
+    []
+  );
+
+  const desktopImageObjectPositions = useMemo(
+    () => ({
+      "/SPG/SPG-6.JPG": "50% 10%",
+      "/SPG/SPG-1.JPG": "50% 10%",
+      "/Usher/Usher-2.JPG": "50% 26%",
+      "/Usher/Usher-4.JPG": "50% 12%"
+    }),
+    []
+  );
+
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  useEffect(() => {
+    heroImages.forEach((src) => {
+      const img = new Image();
+      img.src = src;
+    });
+  }, [heroImages]);
+
+  useEffect(() => {
+    const updateIsDesktop = () => setIsDesktop(window.innerWidth >= 1024);
+    updateIsDesktop();
+    window.addEventListener("resize", updateIsDesktop);
+    return () => window.removeEventListener("resize", updateIsDesktop);
+  }, []);
+
+  useEffect(() => {
+    if (heroImages.length <= 1) return;
+    const intervalId = window.setInterval(() => {
+      setActiveImageIndex((current) => (current + 1) % heroImages.length);
+    }, 3500);
+    return () => window.clearInterval(intervalId);
+  }, [heroImages.length]);
+
+  const activeHeroImage = heroImages[activeImageIndex] ?? heroImages[0] ?? "/traceagency.png";
+  const activeHeroObjectPosition =
+    (isDesktop ? desktopImageObjectPositions[activeHeroImage] : undefined) ??
+    imageObjectPositions[activeHeroImage] ??
+    "50% 50%";
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -28,18 +93,21 @@ export default function Hero() {
   return (
     <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden bg-background">
       
-      {/* Background Video */}
+      {/* Background Slideshow */}
       <div className="absolute inset-0 z-0 overflow-hidden">
-        <video 
-          autoPlay 
-          loop 
-          muted 
-          playsInline
-          className="absolute top-1/2 left-1/2 min-w-full min-h-full w-auto h-auto -translate-x-1/2 -translate-y-1/2 object-cover opacity-60"
-        >
-          {/* Dummy video - bisa diganti dengan video event nyata */}
-          <source src="https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4" type="video/mp4" />
-        </video>
+        <AnimatePresence initial={false}>
+          <motion.img
+            key={activeHeroImage}
+            src={activeHeroImage}
+            alt=""
+            initial={{ opacity: 0, scale: 1.05 }}
+            animate={{ opacity: 0.65, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.05 }}
+            transition={{ duration: 0.9, ease: [0.32, 0.72, 0, 1] }}
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{ objectPosition: activeHeroObjectPosition }}
+          />
+        </AnimatePresence>
         
         {/* Overlay gradient agar teks tetap terbaca */}
         <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/40 to-background/90"></div>

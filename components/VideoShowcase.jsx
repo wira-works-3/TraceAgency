@@ -5,6 +5,28 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function VideoShowcase() {
+  const imageObjectPositions = useMemo(
+    () => ({
+      "/SPG/SPG-3.jpg": "50% 20%",
+      "/SPG/SPG-5.JPG": "50% 20%",
+      "/SPG/SPG-8.JPG": "50% 20%",
+      "/Usher/Usher-1.jpg": "50% 18%",
+      "/Usher/Usher-2.JPG": "50% 18%",
+      "/Usher/Usher-3.JPG": "50% 18%",
+      "/Usher/Usher-9.jpg": "50% 18%",
+      "/Usher/Usher-10.jpg": "50% 18%",
+      "/Usher/Usher-15.jpg": "50% 18%",
+      "/Usher/Usher-16.jpg": "50% 18%",
+      "/MC/MC-1.jpg": "50% 22%",
+      "/Talent/Talent-1.JPG": "50% 20%"
+    }),
+    []
+  );
+
+  const getObjectPosition = (src) => {
+    return imageObjectPositions[src] ?? "50% 50%";
+  };
+
   const categories = useMemo(
     () => [
       {
@@ -73,18 +95,10 @@ export default function VideoShowcase() {
   const safeIndex = ((activeIndex % totalItems) + totalItems) % totalItems;
   const prevIndex = (safeIndex - 1 + totalItems) % totalItems;
   const nextIndex = (safeIndex + 1) % totalItems;
-  const prev2Index = (safeIndex - 2 + totalItems) % totalItems;
-  const next2Index = (safeIndex + 2) % totalItems;
-  const prev3Index = (safeIndex - 3 + totalItems) % totalItems;
-  const next3Index = (safeIndex + 3) % totalItems;
 
   const activeItem = items[safeIndex];
   const prevItem = items[prevIndex];
   const nextItem = items[nextIndex];
-  const prev2Item = items[prev2Index];
-  const next2Item = items[next2Index];
-  const prev3Item = items[prev3Index];
-  const next3Item = items[next3Index];
 
   const activeCategoryKey = activeItem?.categoryKey ?? "spg";
 
@@ -97,7 +111,7 @@ export default function VideoShowcase() {
   };
 
   return (
-    <section className="py-28 bg-background overflow-x-hidden">
+    <section className="py-28 bg-background">
       <div className="container mx-auto px-6 lg:px-8 max-w-[1400px]">
         <div className="text-center mb-10">
           <div className="text-xs font-semibold tracking-[0.3em] uppercase text-text-secondary">GALLERY</div>
@@ -129,93 +143,47 @@ export default function VideoShowcase() {
           })}
         </div>
 
-        <div className="relative w-full max-w-6xl mx-auto overflow-hidden">
-          <div className="relative h-[520px] sm:h-[560px] md:h-[640px] lg:h-[700px]">
+        <div className="relative w-full max-w-6xl mx-auto">
+          <div className="relative h-[320px] sm:h-[380px] md:h-[460px]">
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="relative w-full h-full">
                 <AnimatePresence initial={false}>
                   <motion.div
-                    key={`prev3-${prev3Item?.src}`}
-                    initial={{ opacity: 0, x: "-175%", scale: 0.7 }}
-                    animate={{ opacity: 0.14, x: "-175%", scale: 0.7 }}
-                    exit={{ opacity: 0, x: "-195%", scale: 0.68 }}
-                    transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-                    className="hidden lg:block absolute left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 w-[18%] aspect-[3/4] rounded-3xl overflow-hidden border border-border shadow-[0_25px_70px_rgba(0,0,0,0.45)]"
-                    style={{ zIndex: 1 }}
-                    aria-hidden="true"
-                  >
-                    <img src={prev3Item?.src} alt="" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/55" />
-                  </motion.div>
-
-                  <motion.div
-                    key={`prev2-${prev2Item?.src}`}
-                    initial={{ opacity: 0, x: "-138%", scale: 0.76 }}
-                    animate={{ opacity: 0.22, x: "-138%", scale: 0.76 }}
-                    exit={{ opacity: 0, x: "-158%", scale: 0.73 }}
-                    transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-                    className="hidden md:block absolute left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 w-[26%] lg:w-[20%] aspect-[3/4] rounded-3xl overflow-hidden border border-border shadow-[0_25px_70px_rgba(0,0,0,0.55)]"
-                    style={{ zIndex: 5 }}
-                    aria-hidden="true"
-                  >
-                    <img src={prev2Item?.src} alt="" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/45" />
-                  </motion.div>
-
-                  <motion.div
                     key={`prev-${prevItem?.src}`}
-                    initial={{ opacity: 0, x: "-88%", scale: 0.84 }}
-                    animate={{ opacity: 0.48, x: "-88%", scale: 0.84 }}
-                    exit={{ opacity: 0, x: "-106%", scale: 0.82 }}
+                    initial={{ opacity: 0, x: "-55%", scale: 0.88 }}
+                    animate={{ opacity: 0.55, x: "-55%", scale: 0.88 }}
+                    exit={{ opacity: 0, x: "-65%", scale: 0.86 }}
                     transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-                    className="absolute left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 w-[54%] sm:w-[40%] md:w-[32%] lg:w-[26%] aspect-[3/4] rounded-3xl overflow-hidden border border-border shadow-[0_25px_70px_rgba(0,0,0,0.6)]"
+                    className="absolute left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 w-[70%] sm:w-[55%] md:w-[45%] aspect-[4/3] rounded-3xl overflow-hidden border border-border shadow-[0_25px_70px_rgba(0,0,0,0.6)]"
                     style={{ zIndex: 10 }}
                     aria-hidden="true"
                   >
-                    <img src={prevItem?.src} alt="" className="w-full h-full object-cover" />
+                    <img
+                      src={prevItem?.src}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      style={{ objectPosition: getObjectPosition(prevItem?.src) }}
+                    />
                     <div className="absolute inset-0 bg-black/35" />
                   </motion.div>
 
                   <motion.div
                     key={`next-${nextItem?.src}`}
-                    initial={{ opacity: 0, x: "88%", scale: 0.84 }}
-                    animate={{ opacity: 0.48, x: "88%", scale: 0.84 }}
-                    exit={{ opacity: 0, x: "106%", scale: 0.82 }}
+                    initial={{ opacity: 0, x: "55%", scale: 0.88 }}
+                    animate={{ opacity: 0.55, x: "55%", scale: 0.88 }}
+                    exit={{ opacity: 0, x: "65%", scale: 0.86 }}
                     transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-                    className="absolute left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 w-[54%] sm:w-[40%] md:w-[32%] lg:w-[26%] aspect-[3/4] rounded-3xl overflow-hidden border border-border shadow-[0_25px_70px_rgba(0,0,0,0.6)]"
+                    className="absolute left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 w-[70%] sm:w-[55%] md:w-[45%] aspect-[4/3] rounded-3xl overflow-hidden border border-border shadow-[0_25px_70px_rgba(0,0,0,0.6)]"
                     style={{ zIndex: 20 }}
                     aria-hidden="true"
                   >
-                    <img src={nextItem?.src} alt="" className="w-full h-full object-cover" />
+                    <img
+                      src={nextItem?.src}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      style={{ objectPosition: getObjectPosition(nextItem?.src) }}
+                    />
                     <div className="absolute inset-0 bg-black/35" />
-                  </motion.div>
-
-                  <motion.div
-                    key={`next2-${next2Item?.src}`}
-                    initial={{ opacity: 0, x: "138%", scale: 0.76 }}
-                    animate={{ opacity: 0.22, x: "138%", scale: 0.76 }}
-                    exit={{ opacity: 0, x: "158%", scale: 0.73 }}
-                    transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-                    className="hidden md:block absolute left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 w-[26%] lg:w-[20%] aspect-[3/4] rounded-3xl overflow-hidden border border-border shadow-[0_25px_70px_rgba(0,0,0,0.55)]"
-                    style={{ zIndex: 15 }}
-                    aria-hidden="true"
-                  >
-                    <img src={next2Item?.src} alt="" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/45" />
-                  </motion.div>
-
-                  <motion.div
-                    key={`next3-${next3Item?.src}`}
-                    initial={{ opacity: 0, x: "175%", scale: 0.7 }}
-                    animate={{ opacity: 0.14, x: "175%", scale: 0.7 }}
-                    exit={{ opacity: 0, x: "195%", scale: 0.68 }}
-                    transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-                    className="hidden lg:block absolute left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 w-[18%] aspect-[3/4] rounded-3xl overflow-hidden border border-border shadow-[0_25px_70px_rgba(0,0,0,0.45)]"
-                    style={{ zIndex: 2 }}
-                    aria-hidden="true"
-                  >
-                    <img src={next3Item?.src} alt="" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/55" />
                   </motion.div>
 
                   <motion.div
@@ -224,10 +192,15 @@ export default function VideoShowcase() {
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.94, y: -8 }}
                     transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
-                    className="absolute left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 w-[78%] sm:w-[54%] md:w-[42%] lg:w-[36%] aspect-[3/4] rounded-3xl overflow-hidden border border-border shadow-[0_35px_90px_rgba(0,0,0,0.75)]"
+                    className="absolute left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 w-[86%] sm:w-[68%] md:w-[52%] aspect-[4/3] rounded-3xl overflow-hidden border border-border shadow-[0_35px_90px_rgba(0,0,0,0.75)]"
                     style={{ zIndex: 30 }}
                   >
-                    <img src={activeItem?.src} alt={`${activeItem?.categoryLabel} photo`} className="w-full h-full object-cover" />
+                    <img
+                      src={activeItem?.src}
+                      alt={`${activeItem?.categoryLabel} photo`}
+                      className="w-full h-full object-cover"
+                      style={{ objectPosition: getObjectPosition(activeItem?.src) }}
+                    />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
                     <div className="absolute left-6 bottom-6">
                       <div className="text-[10px] font-bold tracking-[0.3em] uppercase text-text-secondary">
