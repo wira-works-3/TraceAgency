@@ -11,9 +11,13 @@ export default function VideoShowcase() {
     offset: ["start start", "end end"]
   });
 
-  // Text Animation: Fades out as we scroll down
-  const textOpacity = useTransform(scrollYProgress, [0, 0.3], [1, 0]);
-  const textScale = useTransform(scrollYProgress, [0, 0.3], [1, 0.9]);
+  // Teks bergerak lebih jauh sampai mentok ke atas/bawah layar (keluar layar)
+  const textTopY = useTransform(scrollYProgress, [0, 0.2], ["0vh", "-60vh"]); 
+  const textBottomY = useTransform(scrollYProgress, [0, 0.2], ["0vh", "60vh"]); 
+  
+  // Teks menghilang (dissolve) ketika sudah mulai menyentuh ujung layar
+  const textTopOpacity = useTransform(scrollYProgress, [0.1, 0.2], [1, 0]);
+  const textBottomOpacity = useTransform(scrollYProgress, [0.1, 0.2], [1, 0]);
 
   // Video Animation: Appears and expands
   // 0 - 0.2: Fades in
@@ -29,12 +33,15 @@ export default function VideoShowcase() {
         
         {/* Layer Teks */}
         <motion.div 
-          className="absolute inset-0 flex flex-col items-center justify-center text-center z-0 px-4"
-          style={{ opacity: textOpacity, scale: textScale }}
+          className="absolute inset-0 flex flex-col items-center justify-center text-center z-20 px-4"
         >
-          <h2 className="text-5xl md:text-7xl lg:text-[100px] font-bold text-foreground leading-[1.1] tracking-tight">
-            Memorable <br />
-            <span className="text-text-secondary font-medium">Experiences</span>
+          <h2 className="text-5xl md:text-7xl lg:text-[100px] font-bold leading-[1.1] tracking-tight font-display flex flex-col items-center">
+            <motion.span style={{ y: textTopY, opacity: textTopOpacity }} className="text-foreground">
+              Memorable
+            </motion.span>
+            <motion.span style={{ y: textBottomY, opacity: textBottomOpacity }} className="text-text-secondary font-medium">
+              Experiences
+            </motion.span>
           </h2>
         </motion.div>
 
@@ -53,14 +60,14 @@ export default function VideoShowcase() {
             loop 
             muted 
             playsInline
-            className="w-full h-full object-cover opacity-80"
+            className="w-full h-full object-cover opacity-100"
           >
             {/* Dummy video, can be replaced with client's real event video */}
             <source src="https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4" type="video/mp4" />
           </video>
           
-          {/* Overlay gradient untuk menyesuaikan dengan tema gelap */}
-          <div className="absolute inset-0 bg-black/30 pointer-events-none"></div>
+          {/* Overlay gradient untuk menyesuaikan dengan tema gelap (dikurangi opacity-nya) */}
+          <div className="absolute inset-0 bg-black/10 pointer-events-none"></div>
         </motion.div>
 
       </div>

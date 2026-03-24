@@ -35,14 +35,14 @@ export default function Hero() {
           loop 
           muted 
           playsInline
-          className="absolute top-1/2 left-1/2 min-w-full min-h-full w-auto h-auto -translate-x-1/2 -translate-y-1/2 object-cover opacity-30"
+          className="absolute top-1/2 left-1/2 min-w-full min-h-full w-auto h-auto -translate-x-1/2 -translate-y-1/2 object-cover opacity-60"
         >
           {/* Dummy video - bisa diganti dengan video event nyata */}
           <source src="https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4" type="video/mp4" />
         </video>
         
         {/* Overlay gradient agar teks tetap terbaca */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/40 to-background/90"></div>
       </div>
 
       <motion.div 
@@ -61,7 +61,7 @@ export default function Hero() {
           
           <motion.h1 
             variants={itemVariants}
-            className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-foreground leading-tight tracking-tighter mb-6"
+            className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-foreground leading-tight tracking-tighter mb-6 font-display"
           >
             Empowering events with <br />
             <span className="text-text-secondary">exceptional talent.</span>

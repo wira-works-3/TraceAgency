@@ -5,6 +5,7 @@ import { motion, AnimatePresence, useScroll, useMotionValueEvent } from "framer-
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter, usePathname } from "next/navigation";
 
 const navLinks = [
   { name: "Home", href: "/#hero" },
@@ -19,6 +20,8 @@ export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [hidden, setHidden] = useState(false);
   const { scrollY } = useScroll();
+  const router = useRouter();
+  const pathname = usePathname();
 
   // Fungsi untuk menangani smooth scroll secara manual
   const handleSmoothScroll = (e, href) => {
@@ -27,23 +30,23 @@ export default function Header() {
       setIsMobileMenuOpen(false);
       
       const targetId = href.replace('/#', '');
-      const element = document.getElementById(targetId);
       
-      if (element) {
-          // Jika elemen ada di halaman saat ini (Home), scroll ke sana TANPA mengubah URL bar
+      if (pathname === '/') {
+        // Jika sedang di halaman Home, lakukan smooth scroll
+        const element = document.getElementById(targetId);
+        if (element) {
           window.scrollTo({
             top: element.offsetTop,
             behavior: 'smooth'
           });
           
-          // Membersihkan hash dari URL bar menggunakan replaceState yang aman untuk Next.js App Router
           if (window.history.replaceState) {
-            // Next.js menggunakan state internal, jadi kita harus pass null atau object kosong yang aman
             window.history.replaceState(null, '', window.location.pathname);
           }
-        } else {
-        // Jika elemen tidak ada (misal lagi di halaman artikel), pindah ke halaman Home dengan anchor
-        window.location.href = href;
+        }
+      } else {
+        // Jika sedang di halaman lain (misal artikel), redirect ke halaman Home + anchor
+        router.push(href);
       }
     } else {
       // Jika bukan anchor link (misal '/artikel'), biarkan Link/anchor tag bekerja secara normal

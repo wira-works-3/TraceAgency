@@ -66,7 +66,7 @@ export default function Services() {
             <span className="inline-block px-4 py-1.5 rounded-full border border-border text-text-secondary text-xs font-semibold tracking-[0.2em] uppercase mb-6">
               OUR SOLUTIONS
             </span>
-            <h2 className="text-4xl md:text-5xl font-bold text-text-secondary leading-tight">
+            <h2 className="text-4xl md:text-5xl font-bold text-text-secondary leading-tight font-display">
               Transforming <br />
               <span className="text-foreground">events into experiences</span>
             </h2>
