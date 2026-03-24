@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
 const services = [
@@ -12,7 +12,13 @@ const services = [
     tags: ["Sales Promotion", "Brand Ambassador"],
     description: "Sales Promotion Girl & Boy profesional untuk meningkatkan brand awareness dan penjualan produk Anda. Kami melatih talent untuk memahami produk Anda sepenuhnya.",
     bg: "bg-[#111111]",
-    image: "https://images.unsplash.com/photo-1540317580384-e5d43867caa6?q=80&w=1200&auto=format&fit=crop"
+    images: [
+      "/SPG/SPG-1.JPG",
+      "/SPG/SPG-2.JPG",
+      "/SPG/SPG-3.jpg",
+      "/SPG/SPG-4.JPG",
+      "/SPG/SPG-5.JPG"
+    ]
   },
   {
     id: 1,
@@ -20,7 +26,13 @@ const services = [
     tags: ["Event Greeter", "VIP Handling"],
     description: "Penyambutan tamu yang elegan dan profesional untuk memastikan event Anda berjalan lancar. First impression yang tak terlupakan untuk tamu VIP Anda.",
     bg: "bg-[#141414]",
-    image: "https://images.unsplash.com/photo-1551818255-e6e10975bc17?q=80&w=1200&auto=format&fit=crop"
+    images: [
+      "/Usher/Usher-1.jpg",
+      "/Usher/Usher-2.JPG",
+      "/Usher/Usher-3.JPG",
+      "/Usher/Usher-4.JPG",
+      "/Usher/Usher-5.JPG"
+    ]
   },
   {
     id: 2,
@@ -28,7 +40,7 @@ const services = [
     tags: ["Corporate Event", "Concert"],
     description: "MC berpengalaman yang siap menghidupkan suasana dan mengendalikan jalannya acara. Fleksibel untuk berbagai jenis event dari formal hingga kasual.",
     bg: "bg-[#1a1a1a]",
-    image: "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?q=80&w=1200&auto=format&fit=crop"
+    images: ["/MC/MC-1.jpg"]
   },
   {
     id: 3,
@@ -36,12 +48,13 @@ const services = [
     tags: ["Photoshoot", "TVC", "Fashion"],
     description: "Model photoshoot, video komersial, dan talent berbakat untuk kebutuhan kampanye kreatif brand Anda. Wajah representatif untuk berbagai konsep visual.",
     bg: "bg-[#111111]",
-    image: "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?q=80&w=1200&auto=format&fit=crop"
+    images: ["/Talent/Talent-1.JPG"]
   },
 ];
 
 export default function Services() {
   const [activeService, setActiveService] = useState(0);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isDesktop, setIsDesktop] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -57,6 +70,46 @@ export default function Services() {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  useEffect(() => {
+    setActiveImageIndex(0);
+  }, [activeService]);
+
+  const activeImages = services[activeService]?.images ?? [];
+  const canNavigateImages = activeImages.length > 1;
+
+  const activeImageSrc =
+    activeImages[activeImageIndex] ??
+    activeImages[0] ??
+    "/traceagency.png";
+
+  const imageObjectPositions = {
+    "/SPG/SPG-5.JPG": "50% 20%",
+    "/Usher/Usher-1.jpg": "50% 18%",
+    "/Usher/Usher-2.JPG": "50% 18%",
+    "/Usher/Usher-3.JPG": "50% 18%",
+    "/MC/MC-1.jpg": "50% 22%",
+    "/Talent/Talent-1.JPG": "50% 20%"
+  };
+
+  const activeImageObjectPosition =
+    imageObjectPositions[activeImageSrc] ?? "50% 50%";
+
+  const goPrevImage = (event) => {
+    event.stopPropagation();
+    if (!canNavigateImages) return;
+    setActiveImageIndex((currentIndex) =>
+      (currentIndex - 1 + activeImages.length) % activeImages.length
+    );
+  };
+
+  const goNextImage = (event) => {
+    event.stopPropagation();
+    if (!canNavigateImages) return;
+    setActiveImageIndex((currentIndex) =>
+      (currentIndex + 1) % activeImages.length
+    );
+  };
 
   return (
     <section id="services" className="py-32 bg-background">
@@ -111,13 +164,37 @@ export default function Services() {
                     className="flex flex-col lg:flex-row w-full h-full p-2 gap-6"
                   >
                     {/* Left: 16:9 Image */}
-                    <div className="w-full lg:w-1/2 h-[250px] lg:h-full rounded-3xl overflow-hidden relative">
+                    <div className="w-full lg:w-1/2 h-[320px] md:h-[280px] lg:h-full rounded-3xl overflow-hidden relative">
                       <img 
-                        src={service.image} 
+                        src={activeImageSrc} 
                         alt={service.title} 
                         className="w-full h-full object-cover"
+                        style={{ objectPosition: activeImageObjectPosition }}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+
+                      {canNavigateImages ? (
+                        <div className="absolute inset-x-0 bottom-4 flex items-center justify-between px-4">
+                          <button
+                            type="button"
+                            onClick={goPrevImage}
+                            className="h-10 px-4 rounded-full bg-black/50 border border-white/20 text-white text-sm font-semibold hover:bg-black/70 transition-colors flex items-center gap-2"
+                            aria-label="Gambar sebelumnya"
+                          >
+                            <ChevronLeft size={18} />
+                            Back
+                          </button>
+                          <button
+                            type="button"
+                            onClick={goNextImage}
+                            className="h-10 px-4 rounded-full bg-black/50 border border-white/20 text-white text-sm font-semibold hover:bg-black/70 transition-colors flex items-center gap-2"
+                            aria-label="Gambar berikutnya"
+                          >
+                            Next
+                            <ChevronRight size={18} />
+                          </button>
+                        </div>
+                      ) : null}
                     </div>
 
                     {/* Right: Content */}

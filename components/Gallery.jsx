@@ -1,41 +1,32 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { motion, useScroll, useTransform, useVelocity, useSpring, AnimatePresence } from "framer-motion";
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 
 const galleryImages = [
-  { id: 2, src: "https://images.unsplash.com/photo-1551818255-e6e10975bc17?q=80&w=800&auto=format&fit=crop", label: "Brand Activation", desc: "Meningkatkan engagement produk sebesar 150%" },
-  { id: 3, src: "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?q=80&w=800&auto=format&fit=crop", label: "Tech Conference", desc: "Dukungan MC & Usher untuk 2000+ peserta VIP" },
-  { id: 4, src: "https://images.unsplash.com/photo-1523580494112-071d31199a21?q=80&w=800&auto=format&fit=crop", label: "Music Festival", desc: "Manajemen talent lapangan yang masif" },
-  { id: 5, src: "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?q=80&w=800&auto=format&fit=crop", label: "Fashion Show", desc: "Menyediakan 20+ model runway profesional" },
-  { id: 6, src: "https://images.unsplash.com/photo-1529070538774-1843cb3265df?q=80&w=800&auto=format&fit=crop", label: "Corporate Event", desc: "Acara tahunan perusahaan berskala nasional" },
+  { id: 1, src: "/Usher/Usher-12.jpg", label: "Usher", desc: "Handling tamu dan VIP dengan profesional" },
+  { id: 2, src: "/SPG/SPG-7.JPG", label: "SPG & SPB", desc: "Brand activation dan sales support" },
+  { id: 3, src: "/Usher/Usher-1.jpg", label: "Usher", desc: "First impression yang elegan" },
+  { id: 4, src: "/Usher/Usher-6.JPG", label: "Usher", desc: "On-ground event support" },
+  { id: 5, src: "/Usher/Usher-14.jpg", label: "Usher", desc: "Event flow yang rapi dan terarah" },
 ];
 
 export default function Gallery() {
   const targetRef = useRef(null);
+  const scrollerRef = useRef(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [hoveredProject, setHoveredProject] = useState(null);
+  const [isViewMoreOpen, setIsViewMoreOpen] = useState(false);
+  const [maxTranslateX, setMaxTranslateX] = useState(0);
+  const [scrollAreaHeight, setScrollAreaHeight] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(false);
 
   const { scrollYProgress } = useScroll({
     target: targetRef,
     offset: ["start start", "end end"]
   });
 
-  // 1. Horizontal Scroll Movement
-  const x = useTransform(scrollYProgress, [0, 1], ["0%", "-65%"]);
-  
-  // 2. Kinetic Velocity setup
-  const scrollVelocity = useVelocity(scrollYProgress);
-  const smoothVelocity = useSpring(scrollVelocity, {
-    damping: 50,
-    stiffness: 400
-  });
-  
-  // 3. 3D Parallax Effects based on velocity
-  // Reverse the direction of rotation to match your logic:
-  // Scroll down (velocity > 0): right side forward, left side back (negative rotateY)
-  // Scroll up (velocity < 0): left side forward, right side back (positive rotateY)
-  const rotateY = useTransform(smoothVelocity, [-0.5, 0.5], [-35, 35]); 
+  const x = useTransform(scrollYProgress, (progress) => -progress * maxTranslateX);
   
   // Track mouse position for the floating cursor popup
   useEffect(() => {
@@ -47,11 +38,41 @@ export default function Gallery() {
     return () => window.removeEventListener("mousemove", updateMousePosition);
   }, []);
 
+  useEffect(() => {
+    const updateLayoutMetrics = () => {
+      setIsDesktop(window.innerWidth >= 1024);
+
+      const viewportWidth = targetRef.current?.clientWidth ?? window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const fullWidth = scrollerRef.current?.scrollWidth ?? 0;
+      const nextMaxTranslateX = Math.max(0, fullWidth - viewportWidth);
+      setMaxTranslateX(nextMaxTranslateX);
+
+      const isLg = window.innerWidth >= 1024;
+      const scrollFactor = isLg ? 0.85 : 0.9;
+      const minHeight = viewportHeight * (isLg ? 2.5 : 2.3);
+      const nextScrollAreaHeight = Math.max(
+        minHeight,
+        viewportHeight + nextMaxTranslateX * scrollFactor
+      );
+      setScrollAreaHeight(nextScrollAreaHeight);
+    };
+
+    updateLayoutMetrics();
+    window.addEventListener("resize", updateLayoutMetrics);
+    return () => window.removeEventListener("resize", updateLayoutMetrics);
+  }, []);
+
   return (
-    <section id="gallery" ref={targetRef} className="relative h-[300vh] bg-background">
+    <section
+      id="gallery"
+      ref={targetRef}
+      className="relative min-h-[220vh] bg-background"
+      style={scrollAreaHeight ? { height: `${scrollAreaHeight}px` } : undefined}
+    >
       {/* Sticky container that stays in place while scrolling */}
       {/* Increased perspective to make the 3D effect feel more like a subtle page turn */}
-      <div className="sticky top-0 h-screen flex flex-col justify-center overflow-hidden bg-background" style={{ perspective: "1200px" }}>
+      <div className="sticky top-0 h-screen flex flex-col justify-center overflow-hidden bg-background">
         
         {/* Header / Title */}
         <div className="absolute top-24 left-0 w-full px-6 lg:px-12 flex justify-between items-start z-10 pointer-events-none">
@@ -73,17 +94,14 @@ export default function Gallery() {
         {/* Horizontal Scrolling Gallery */}
         <motion.div 
           style={{ x }} 
-          className="flex gap-16 pl-[10vw] mt-24 items-center h-[60vh] w-max"
+          ref={scrollerRef}
+          className="flex gap-16 pl-[10vw] pr-[10vw] lg:pr-[14vw] mt-24 items-center h-[60vh] w-max"
         >
           {galleryImages.map((img) => {
             return (
               <motion.div 
                 key={img.id}
-                style={{ 
-                  rotateY, 
-                  transformStyle: "preserve-3d" 
-                }}
-                className={`relative shrink-0 cursor-none shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden border-8 border-background ${
+                className={`relative shrink-0 cursor-pointer shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden border-8 border-background ${
                   img.id % 2 === 0 
                     ? 'w-[350px] md:w-[450px] h-[450px] md:h-[600px]' 
                     : 'w-[300px] md:w-[350px] h-[350px] md:h-[450px]'
@@ -96,19 +114,73 @@ export default function Gallery() {
                   When the container rotates, this creates a strong 3D parallax effect, 
                   making the right/left edges swing significantly forward/backward.
                 */}
-                <motion.img
+                <img
                   src={img.src}
                   alt={`Gallery image ${img.id}`}
-                  className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700 origin-center"
-                  style={{ 
-                    scale: 1.25, 
-                    translateZ: "30px" 
-                  }}
+                  className="w-full h-full object-cover transition-all duration-700"
                 />
               </motion.div>
             );
           })}
         </motion.div>
+
+        <div className="absolute inset-x-0 bottom-16 flex items-center justify-center z-20 pointer-events-auto">
+          <button
+            type="button"
+            onClick={() => setIsViewMoreOpen(true)}
+            className="px-8 py-4 rounded-full bg-foreground text-background text-sm font-bold hover:bg-gray-200 transition-colors"
+          >
+            View More
+          </button>
+        </div>
+
+        <AnimatePresence>
+          {isViewMoreOpen ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center px-6"
+              onClick={() => setIsViewMoreOpen(false)}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 12 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 12 }}
+                transition={{ type: "spring", damping: 22, stiffness: 260 }}
+                className="w-full max-w-5xl bg-background border border-border rounded-3xl overflow-hidden shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between px-6 py-5 border-b border-border">
+                  <div>
+                    <div className="text-xs uppercase tracking-[0.2em] text-text-secondary font-semibold">Gallery</div>
+                    <div className="text-xl font-black text-foreground uppercase">Projects, Highlights, Events</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsViewMoreOpen(false)}
+                    className="h-10 px-5 rounded-full border border-border text-foreground text-sm font-semibold hover:bg-foreground hover:text-background transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+                <div className="p-6 max-h-[75vh] overflow-auto">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {galleryImages.map((img) => (
+                      <div key={`modal-${img.id}`} className="rounded-2xl overflow-hidden border border-border bg-background">
+                        <img src={img.src} alt={img.label} className="w-full h-56 object-cover" />
+                        <div className="p-4">
+                          <div className="text-[10px] uppercase tracking-widest font-bold text-text-secondary">{img.label}</div>
+                          <div className="text-sm font-semibold text-foreground mt-1">{img.desc}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
 
         {/* Floating Cursor Popup */}
         <AnimatePresence>
@@ -122,6 +194,7 @@ export default function Gallery() {
               style={{
                 left: mousePosition.x + 20,
                 top: mousePosition.y + 20,
+                display: isDesktop ? "block" : "none",
               }}
             >
               <span className="text-[10px] uppercase tracking-widest font-bold text-text-secondary block mb-1">PROJECT</span>

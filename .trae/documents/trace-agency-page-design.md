@@ -50,16 +50,21 @@
   - Ikon lucide-react (24–28px), judul, deskripsi 2–3 baris.
   - Hover: elevasi + border accent halus.
 
-### 5) Gallery (Masonry-First)
-- Fokus visual: section paling kaya konten.
-- Toolbar (opsional UI, tetap simple): chips kategori (All / Brand / Event / Product) untuk filter front-end.
-- Masonry:
-  - Implementasi visual: CSS columns atau CSS grid dengan variasi tinggi (tile ratios 1:1, 4:5, 16:9).
-  - Tile: foto Unsplash + overlay title/tag saat hover.
-- Lightbox Modal:
-  - Tampilan foto besar, caption, tombol prev/next/close.
-  - Keyboard: Esc close, arrow navigation (opsional).
-  - Motion: backdrop fade + image scale in.
+### 5) Carousel Portofolio (Gaya Contoh, Local Images)
+- Tujuan: menggantikan section “Memorable Experiences” (dihapus) dengan carousel portofolio gaya seperti contoh gambar.
+- Sumber konten: gambar lokal (bukan CDN) yang di-loop per kategori: **SPG → Usher → MC → Talent → kembali ke SPG**.
+  - Setiap kategori memiliki list gambar; carousel berpindah antar item dan terus loop.
+- Layout:
+  - Desktop: area carousel utama (gambar aktif) + panel preview “Next” di sisi kanan (atau kartu overlay di kanan bawah) menampilkan thumbnail + label item berikutnya.
+  - Struktur pakai CSS Grid: 2 kolom (main 8fr, preview 4fr) dengan gap 24px.
+- Komponen & interaksi:
+  - Slide Utama: gambar besar dengan overlay gradient; teks label kategori + judul singkat (opsional) di kiri bawah.
+  - Tombol **Prev/Next**: floating, sisi kiri/kanan slide; area klik 44px; hover glow accent.
+  - **Preview Next Item**: selalu terlihat; klik preview = lompat ke item tersebut.
+  - Loop behavior: Next dari item terakhir kembali ke item pertama; Prev dari item pertama ke item terakhir.
+- Motion:
+  - Transisi slide: 250–350ms ease (slide/opacity) + subtle scale.
+  - Preview: hover lift + border accent.
 
 ### 6) Artikel (Teaser)
 - Featured article row: cover besar kiri + teks kanan (judul, ringkasan, meta tanggal).
