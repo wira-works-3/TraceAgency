@@ -36,10 +36,12 @@ export default function Hero() {
 
   const desktopImageObjectPositions = useMemo(
     () => ({
-      "/SPG/SPG-6.JPG": "50% 10%",
-      "/SPG/SPG-1.JPG": "50% 10%",
-      "/Usher/Usher-2.JPG": "50% 26%",
-      "/Usher/Usher-4.JPG": "50% 12%"
+      "/Usher/Usher-1.jpg": "50% 26%",
+      "/SPG/SPG-6.JPG": "50% 56%",
+      "/SPG/SPG-1.JPG": "50% 56%",
+      "/SPG/SPG-3.jpg": "50% 28%",
+      "/Usher/Usher-2.JPG": "50% 12%",
+      "/Usher/Usher-4.JPG": "50% 56%"
     }),
     []
   );
@@ -124,15 +126,15 @@ export default function Hero() {
           className="flex flex-col items-center"
         >
           <motion.div variants={itemVariants} className="inline-block mb-6 px-4 py-1.5 rounded-full border border-border text-text-secondary text-xs font-semibold tracking-[0.2em] uppercase">
-            HR & EVENT AGENCY
+            Agensi SDM & Acara
           </motion.div>
           
           <motion.h1 
             variants={itemVariants}
             className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-foreground leading-tight tracking-tighter mb-6 font-display"
           >
-            Empowering events with <br />
-            <span className="text-text-secondary">exceptional talent.</span>
+            Perkuat setiap acara Anda <br />
+            <span className="text-text-secondary">dengan talenta terbaik.</span>
           </motion.h1>
           
           <motion.p 
@@ -161,7 +163,7 @@ export default function Hero() {
       
       {/* Client Logos / Marquee at bottom of Hero */}
       <div className="absolute bottom-10 left-0 w-full overflow-hidden flex flex-col items-center opacity-50">
-        <span className="text-[10px] text-text-secondary tracking-widest uppercase mb-4">They trusted us</span>
+        <span className="text-[10px] text-text-secondary tracking-widest uppercase mb-4">Mereka mempercayai kami</span>
         <div className="flex w-full whitespace-nowrap overflow-hidden">
           <div className="animate-marquee flex gap-12 items-center px-6">
             {/* Repeated logos for infinite scroll effect */}

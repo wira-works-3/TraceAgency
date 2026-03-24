@@ -16,7 +16,6 @@ export default function Gallery() {
   const scrollerRef = useRef(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [hoveredProject, setHoveredProject] = useState(null);
-  const [isViewMoreOpen, setIsViewMoreOpen] = useState(false);
   const [maxTranslateX, setMaxTranslateX] = useState(0);
   const [scrollAreaHeight, setScrollAreaHeight] = useState(0);
   const [isDesktop, setIsDesktop] = useState(false);
@@ -77,13 +76,13 @@ export default function Gallery() {
         {/* Header / Title */}
         <div className="absolute top-24 left-0 w-full px-6 lg:px-12 flex justify-between items-start z-10 pointer-events-none">
           <div className="text-sm text-text-secondary uppercase tracking-widest font-medium hidden md:block">
-            Projects, Highlights, Events
+            Proyek, sorotan, acara
           </div>
           <div className="text-center w-full md:w-auto">
             <h2 className="text-5xl md:text-7xl lg:text-8xl font-black text-foreground uppercase leading-none tracking-tighter">
-              How we helped
+              Kami wujudkan
               <br />
-              others succeed
+              kesuksesan acara Anda
             </h2>
           </div>
           <div className="hidden md:block w-32">
@@ -116,71 +115,13 @@ export default function Gallery() {
                 */}
                 <img
                   src={img.src}
-                  alt={`Gallery image ${img.id}`}
+                  alt={`Galeri ${img.id}`}
                   className="w-full h-full object-cover transition-all duration-700"
                 />
               </motion.div>
             );
           })}
         </motion.div>
-
-        <div className="absolute inset-x-0 bottom-16 flex items-center justify-center z-20 pointer-events-auto">
-          <button
-            type="button"
-            onClick={() => setIsViewMoreOpen(true)}
-            className="px-8 py-4 rounded-full bg-foreground text-background text-sm font-bold hover:bg-gray-200 transition-colors"
-          >
-            View More
-          </button>
-        </div>
-
-        <AnimatePresence>
-          {isViewMoreOpen ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center px-6"
-              onClick={() => setIsViewMoreOpen(false)}
-            >
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 12 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 12 }}
-                transition={{ type: "spring", damping: 22, stiffness: 260 }}
-                className="w-full max-w-5xl bg-background border border-border rounded-3xl overflow-hidden shadow-2xl"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center justify-between px-6 py-5 border-b border-border">
-                  <div>
-                    <div className="text-xs uppercase tracking-[0.2em] text-text-secondary font-semibold">Gallery</div>
-                    <div className="text-xl font-black text-foreground uppercase">Projects, Highlights, Events</div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsViewMoreOpen(false)}
-                    className="h-10 px-5 rounded-full border border-border text-foreground text-sm font-semibold hover:bg-foreground hover:text-background transition-colors"
-                  >
-                    Close
-                  </button>
-                </div>
-                <div className="p-6 max-h-[75vh] overflow-auto">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {galleryImages.map((img) => (
-                      <div key={`modal-${img.id}`} className="rounded-2xl overflow-hidden border border-border bg-background">
-                        <img src={img.src} alt={img.label} className="w-full h-56 object-cover" />
-                        <div className="p-4">
-                          <div className="text-[10px] uppercase tracking-widest font-bold text-text-secondary">{img.label}</div>
-                          <div className="text-sm font-semibold text-foreground mt-1">{img.desc}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
 
         {/* Floating Cursor Popup */}
         <AnimatePresence>
@@ -197,7 +138,7 @@ export default function Gallery() {
                 display: isDesktop ? "block" : "none",
               }}
             >
-              <span className="text-[10px] uppercase tracking-widest font-bold text-text-secondary block mb-1">PROJECT</span>
+              <span className="text-[10px] uppercase tracking-widest font-bold text-text-secondary block mb-1">Proyek</span>
               <h4 className="text-lg font-bold text-foreground mb-1 leading-tight">{hoveredProject.label}</h4>
               <p className="text-xs text-text-secondary leading-relaxed">{hoveredProject.desc}</p>
             </motion.div>

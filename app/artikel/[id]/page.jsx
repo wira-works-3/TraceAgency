@@ -2,7 +2,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { articlesData } from "../page";
+import { articlesData } from "@/data/articles";
 
 // Karena ini adalah app router Next.js, params di Server Component harus di-await (Promise) di Next 15+
 export default async function ArticleDetail({ params }) {
@@ -32,7 +32,7 @@ export default async function ArticleDetail({ params }) {
     <>
       <Header />
       <main className="flex-1 flex flex-col w-full min-h-screen bg-background pt-32 pb-20 mt-0">
-        <article className="container mx-auto px-6 lg:px-8 max-w-4xl">
+        <article className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl overflow-x-hidden">
           
           {/* Back Button */}
           <Link 
@@ -56,9 +56,9 @@ export default async function ArticleDetail({ params }) {
           </header>
 
           {/* Hero Image */}
-          <div className="relative w-full h-[400px] md:h-[600px] rounded-3xl overflow-hidden mb-16">
-            <img 
-              src={article.image} 
+          <div className="relative w-full aspect-[16/10] md:aspect-auto md:h-[600px] min-h-[240px] rounded-3xl overflow-hidden mb-16 bg-surface">
+            <img
+              src={article.image}
               alt={article.title}
               className="w-full h-full object-cover"
             />

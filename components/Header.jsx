@@ -8,11 +8,11 @@ import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 
 const navLinks = [
-  { name: "Home", href: "/#hero" },
-  { name: "About", href: "/#about" },
-  { name: "Services", href: "/#services" },
-  { name: "Gallery", href: "/#gallery" },
-  { name: "Artikel", href: "/artikel" }, // Menghapus hash (#) agar langsung masuk ke halaman atas
+  { name: "Beranda", href: "/#hero" },
+  { name: "Tentang Kami", href: "/#about" },
+  { name: "Layanan", href: "/#services" },
+  { name: "Galeri", href: "/#gallery" },
+  { name: "Artikel", href: "/artikel" },
 ];
 
 export default function Header() {
@@ -95,7 +95,7 @@ export default function Header() {
         }}>
           <Image 
             src="/traceagency.png" 
-            alt="Trace Agency Logo" 
+            alt="Logo Trace Agency" 
             width={140} 
             height={56} 
             className="h-10 md:h-12 w-auto object-contain hover:opacity-80 transition-opacity"

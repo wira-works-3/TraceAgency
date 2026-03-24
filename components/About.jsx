@@ -104,7 +104,7 @@ export default function About() {
         >
           <div className="mb-8">
             <span className="inline-block px-4 py-1.5 rounded-full border border-border text-text-secondary text-xs font-semibold tracking-[0.2em] uppercase">
-              ABOUT US
+              Tentang Kami
             </span>
           </div>
           
@@ -136,7 +136,7 @@ export default function About() {
           <div className="flex justify-between items-end mb-16 border-b border-border pb-8">
             <div>
               <span className="inline-block px-4 py-1.5 rounded-full border border-border text-text-secondary text-xs font-semibold tracking-[0.2em] uppercase mb-6">
-                HIGHLIGHTS
+                Sorotan
               </span>
               <h2 className="text-4xl md:text-5xl font-bold text-foreground">
                 Angka di balik <span className="text-text-secondary">kesuksesan</span>

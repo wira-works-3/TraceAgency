@@ -1,10 +1,19 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function VideoShowcase() {
+  const [isNarrowScreen, setIsNarrowScreen] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    const update = () => setIsNarrowScreen(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
   const imageObjectPositions = useMemo(
     () => ({
       "/SPG/SPG-3.jpg": "50% 20%",
@@ -110,20 +119,25 @@ export default function VideoShowcase() {
     if (targetIndex >= 0) setActiveIndex(targetIndex);
   };
 
+  const sidePeek = isNarrowScreen ? "32%" : "55%";
+  const sidePeekExitPrev = isNarrowScreen ? "-40%" : "-65%";
+  const sidePeekExitNext = isNarrowScreen ? "40%" : "65%";
+  const sideScale = isNarrowScreen ? 0.86 : 0.88;
+
   return (
-    <section className="py-28 bg-background">
-      <div className="container mx-auto px-6 lg:px-8 max-w-[1400px]">
+    <section className="py-28 bg-background overflow-x-hidden">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-[1400px]">
         <div className="text-center mb-10">
-          <div className="text-xs font-semibold tracking-[0.3em] uppercase text-text-secondary">GALLERY</div>
+          <div className="text-xs font-semibold tracking-[0.3em] uppercase text-text-secondary">Galeri</div>
           <h2 className="mt-4 text-4xl md:text-5xl font-black text-foreground leading-tight tracking-tight uppercase">
-            Our Visual Diary
+            Diari visual kami
           </h2>
           <p className="mt-4 text-sm md:text-base text-text-secondary max-w-2xl mx-auto">
             Lihat dokumentasi event melalui koleksi foto dan highlight dari tim kami.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-3 mb-12">
+        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-12 px-1">
           {categories.map((category) => {
             const isActive = category.key === activeCategoryKey;
             return (
@@ -143,18 +157,18 @@ export default function VideoShowcase() {
           })}
         </div>
 
-        <div className="relative w-full max-w-6xl mx-auto">
-          <div className="relative h-[320px] sm:h-[380px] md:h-[460px]">
+        <div className="relative w-full max-w-6xl mx-auto overflow-hidden sm:overflow-visible">
+          <div className="relative h-[300px] sm:h-[380px] md:h-[460px]">
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="relative w-full h-full">
+              <div className="relative w-full max-w-full h-full overflow-hidden sm:overflow-visible">
                 <AnimatePresence initial={false}>
                   <motion.div
                     key={`prev-${prevItem?.src}`}
-                    initial={{ opacity: 0, x: "-55%", scale: 0.88 }}
-                    animate={{ opacity: 0.55, x: "-55%", scale: 0.88 }}
-                    exit={{ opacity: 0, x: "-65%", scale: 0.86 }}
+                    initial={{ opacity: 0, x: `-${sidePeek}`, scale: sideScale }}
+                    animate={{ opacity: 0.55, x: `-${sidePeek}`, scale: sideScale }}
+                    exit={{ opacity: 0, x: sidePeekExitPrev, scale: sideScale - 0.02 }}
                     transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-                    className="absolute left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 w-[70%] sm:w-[55%] md:w-[45%] aspect-[4/3] rounded-3xl overflow-hidden border border-border shadow-[0_25px_70px_rgba(0,0,0,0.6)]"
+                    className="absolute left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 w-[52%] min-w-0 sm:w-[55%] md:w-[45%] aspect-[4/3] rounded-2xl sm:rounded-3xl overflow-hidden border border-border shadow-[0_25px_70px_rgba(0,0,0,0.6)]"
                     style={{ zIndex: 10 }}
                     aria-hidden="true"
                   >
@@ -169,11 +183,11 @@ export default function VideoShowcase() {
 
                   <motion.div
                     key={`next-${nextItem?.src}`}
-                    initial={{ opacity: 0, x: "55%", scale: 0.88 }}
-                    animate={{ opacity: 0.55, x: "55%", scale: 0.88 }}
-                    exit={{ opacity: 0, x: "65%", scale: 0.86 }}
+                    initial={{ opacity: 0, x: sidePeek, scale: sideScale }}
+                    animate={{ opacity: 0.55, x: sidePeek, scale: sideScale }}
+                    exit={{ opacity: 0, x: sidePeekExitNext, scale: sideScale - 0.02 }}
                     transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-                    className="absolute left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 w-[70%] sm:w-[55%] md:w-[45%] aspect-[4/3] rounded-3xl overflow-hidden border border-border shadow-[0_25px_70px_rgba(0,0,0,0.6)]"
+                    className="absolute left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 w-[52%] min-w-0 sm:w-[55%] md:w-[45%] aspect-[4/3] rounded-2xl sm:rounded-3xl overflow-hidden border border-border shadow-[0_25px_70px_rgba(0,0,0,0.6)]"
                     style={{ zIndex: 20 }}
                     aria-hidden="true"
                   >
@@ -192,12 +206,12 @@ export default function VideoShowcase() {
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.94, y: -8 }}
                     transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
-                    className="absolute left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 w-[86%] sm:w-[68%] md:w-[52%] aspect-[4/3] rounded-3xl overflow-hidden border border-border shadow-[0_35px_90px_rgba(0,0,0,0.75)]"
+                    className="absolute left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 w-[82%] max-w-[calc(100vw-2rem)] sm:max-w-none sm:w-[68%] md:w-[52%] aspect-[4/3] rounded-2xl sm:rounded-3xl overflow-hidden border border-border shadow-[0_35px_90px_rgba(0,0,0,0.75)]"
                     style={{ zIndex: 30 }}
                   >
                     <img
                       src={activeItem?.src}
-                      alt={`${activeItem?.categoryLabel} photo`}
+                      alt={`Foto ${activeItem?.categoryLabel}`}
                       className="w-full h-full object-cover"
                       style={{ objectPosition: getObjectPosition(activeItem?.src) }}
                     />
@@ -221,7 +235,7 @@ export default function VideoShowcase() {
               type="button"
               onClick={goPrev}
               className="h-12 w-12 rounded-full border border-border bg-background text-foreground hover:bg-foreground hover:text-background transition-colors flex items-center justify-center"
-              aria-label="Previous"
+              aria-label="Sebelumnya"
             >
               <ChevronLeft size={20} />
             </button>
@@ -229,7 +243,7 @@ export default function VideoShowcase() {
               type="button"
               onClick={goNext}
               className="h-12 w-12 rounded-full border border-border bg-background text-foreground hover:bg-foreground hover:text-background transition-colors flex items-center justify-center"
-              aria-label="Next"
+              aria-label="Berikutnya"
             >
               <ChevronRight size={20} />
             </button>

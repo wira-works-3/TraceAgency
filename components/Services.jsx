@@ -9,7 +9,7 @@ const services = [
   {
     id: 0,
     title: "SPG & SPB",
-    tags: ["Sales Promotion", "Brand Ambassador"],
+    tags: ["Promosi penjualan", "Duta merek"],
     description: "Sales Promotion Girl & Boy profesional untuk meningkatkan brand awareness dan penjualan produk Anda. Kami melatih talent untuk memahami produk Anda sepenuhnya.",
     bg: "bg-[#111111]",
     images: [
@@ -23,7 +23,7 @@ const services = [
   {
     id: 1,
     title: "Usher",
-    tags: ["Event Greeter", "VIP Handling"],
+    tags: ["Penyambut tamu", "Tamu VIP"],
     description: "Penyambutan tamu yang elegan dan profesional untuk memastikan event Anda berjalan lancar. First impression yang tak terlupakan untuk tamu VIP Anda.",
     bg: "bg-[#141414]",
     images: [
@@ -37,7 +37,7 @@ const services = [
   {
     id: 2,
     title: "Master of Ceremony",
-    tags: ["Corporate Event", "Concert"],
+    tags: ["Acara korporat", "Konser"],
     description: "MC berpengalaman yang siap menghidupkan suasana dan mengendalikan jalannya acara. Fleksibel untuk berbagai jenis event dari formal hingga kasual.",
     bg: "bg-[#1a1a1a]",
     images: ["/MC/MC-1.jpg"]
@@ -45,7 +45,7 @@ const services = [
   {
     id: 3,
     title: "Model & Talent",
-    tags: ["Photoshoot", "TVC", "Fashion"],
+    tags: ["Pemotretan", "TVC", "Fashion"],
     description: "Model photoshoot, video komersial, dan talent berbakat untuk kebutuhan kampanye kreatif brand Anda. Wajah representatif untuk berbagai konsep visual.",
     bg: "bg-[#111111]",
     images: ["/Talent/Talent-1.JPG"]
@@ -117,11 +117,11 @@ export default function Services() {
         <div className="flex flex-col md:flex-row md:justify-between md:items-end mb-16 gap-6">
           <div>
             <span className="inline-block px-4 py-1.5 rounded-full border border-border text-text-secondary text-xs font-semibold tracking-[0.2em] uppercase mb-6">
-              OUR SOLUTIONS
+              Solusi Kami
             </span>
             <h2 className="text-4xl md:text-5xl font-bold text-text-secondary leading-tight font-display">
-              Transforming <br />
-              <span className="text-foreground">events into experiences</span>
+              Mengubah acara <br />
+              <span className="text-foreground">menjadi pengalaman berkesan</span>
             </h2>
           </div>
           <Link 
@@ -182,7 +182,7 @@ export default function Services() {
                             aria-label="Gambar sebelumnya"
                           >
                             <ChevronLeft size={18} />
-                            Back
+                            Sebelumnya
                           </button>
                           <button
                             type="button"
@@ -190,7 +190,7 @@ export default function Services() {
                             className="h-10 px-4 rounded-full bg-black/50 border border-white/20 text-white text-sm font-semibold hover:bg-black/70 transition-colors flex items-center gap-2"
                             aria-label="Gambar berikutnya"
                           >
-                            Next
+                            Berikutnya
                             <ChevronRight size={18} />
                           </button>
                         </div>

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Mail, Phone, MapPin, Send, Loader2, CheckCircle } from "lucide-react";
+import { Mail, Phone, Instagram, Send, Loader2, CheckCircle } from "lucide-react";
 
 export default function Kontak() {
   const [formState, setFormState] = useState("idle"); // idle, loading, success, error
@@ -31,11 +31,11 @@ export default function Kontak() {
             transition={{ duration: 0.6 }}
           >
             <span className="inline-block px-4 py-1.5 rounded-full border border-border text-text-secondary text-xs font-semibold tracking-[0.2em] uppercase mb-6">
-              GET IN TOUCH
+              Hubungi kami
             </span>
             <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-8 leading-tight">
-              Ready to create <br />
-              <span className="text-text-secondary">something amazing?</span>
+              Siap wujudkan <br />
+              <span className="text-text-secondary">sesuatu yang luar biasa?</span>
             </h2>
             <p className="text-lg text-text-secondary leading-relaxed mb-12 max-w-md">
               Punya ide event atau butuh talent profesional untuk kampanye Anda? Hubungi kami sekarang dan mari wujudkan visi Anda bersama Trace Agency.
@@ -60,21 +60,31 @@ export default function Kontak() {
                 </div>
                 <div>
                   <h4 className="text-xs font-semibold text-text-secondary uppercase tracking-widest mb-1">WhatsApp</h4>
-                  <a href="https://wa.me/6285191641608" target="_blank" rel="noopener noreferrer" className="text-xl font-medium text-foreground hover:text-gray-300 transition-colors">
-                    0851-9164-1608
+                  <a
+                    href="https://wa.me/6285191641608"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xl font-medium text-foreground hover:text-gray-300 transition-colors underline-offset-4 hover:underline"
+                  >
+                    +62 851-9164-1608
                   </a>
                 </div>
               </div>
 
               <div className="flex items-center gap-6 group">
                 <div className="w-14 h-14 rounded-full bg-surface border border-border flex items-center justify-center shrink-0 group-hover:bg-foreground group-hover:text-background transition-colors duration-300">
-                  <MapPin size={20} />
+                  <Instagram size={20} />
                 </div>
                 <div>
-                  <h4 className="text-xs font-semibold text-text-secondary uppercase tracking-widest mb-1">Lokasi</h4>
-                  <p className="text-xl font-medium text-foreground">
-                    Jakarta, Indonesia
-                  </p>
+                  <h4 className="text-xs font-semibold text-text-secondary uppercase tracking-widest mb-1">Instagram</h4>
+                  <a
+                    href="https://www.instagram.com/sewaspg/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xl font-medium text-foreground hover:text-gray-300 transition-colors underline-offset-4 hover:underline"
+                  >
+                    @sewaspg
+                  </a>
                 </div>
               </div>
             </div>

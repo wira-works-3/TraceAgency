@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowUpRight, MapPin, Mail, Phone } from "lucide-react";
+import { ArrowUpRight, Instagram, Mail, Phone } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 
 export default function Footer() {
@@ -65,13 +65,19 @@ export default function Footer() {
             <p className="text-text-secondary leading-relaxed max-w-sm text-base">
               We create memorable experiences, providing exceptional talents and event management that redefine how people connect with your brand.
             </p>
-            <div className="flex items-start gap-3 text-text-secondary">
-              <MapPin className="w-5 h-5 mt-1 shrink-0" />
+            <a
+              href="https://www.instagram.com/sewaspg/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-start gap-3 text-text-secondary hover:text-foreground transition-colors group"
+            >
+              <Instagram className="w-5 h-5 mt-1 shrink-0" />
               <p className="text-sm">
-                Jakarta, Indonesia<br />
-                Serving clients nationwide.
+                <span className="font-medium text-foreground group-hover:text-foreground">@sewaspg</span>
+                <br />
+                Ikuti kami di Instagram.
               </p>
-            </div>
+            </a>
           </div>
 
           {/* Quick Links */}
@@ -106,7 +112,7 @@ export default function Footer() {
             <h4 className="text-sm font-semibold text-foreground uppercase tracking-widest">Socials</h4>
             <ul className="space-y-4">
               {[
-                { name: "Instagram", url: "https://instagram.com/sewaspg" },
+                { name: "Instagram (@sewaspg)", url: "https://www.instagram.com/sewaspg/" },
                 { name: "LinkedIn", url: "#" },
                 { name: "Twitter", url: "#" },
                 { name: "TikTok", url: "#" }
@@ -136,11 +142,16 @@ export default function Footer() {
                 </div>
                 <span className="text-base font-medium">hello@traceagency.com</span>
               </a>
-              <a href="tel:+6281234567890" className="flex items-center gap-3 text-text-secondary hover:text-foreground transition-colors group">
+              <a
+                href="https://wa.me/6285191641608"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 text-text-secondary hover:text-foreground transition-colors group"
+              >
                 <div className="w-10 h-10 rounded-full border border-border flex items-center justify-center group-hover:border-foreground transition-colors">
                   <Phone className="w-4 h-4" />
                 </div>
-                <span className="text-base font-medium">+62 812 3456 7890</span>
+                <span className="text-base font-medium">WhatsApp +62 851-9164-1608</span>
               </a>
             </div>
           </div>
