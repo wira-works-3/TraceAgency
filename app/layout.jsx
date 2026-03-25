@@ -1,6 +1,7 @@
 import { Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import SmoothScroll from "../components/SmoothScroll";
+import FloatingSocialButtons from "../components/FloatingSocialButtons";
 
 // Plus Jakarta Sans untuk teks body (bersih, modern, mudah dibaca)
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -40,6 +41,7 @@ export default function RootLayout({ children }) {
         <SmoothScroll>
           {children}
         </SmoothScroll>
+        <FloatingSocialButtons />
       </body>
     </html>
   );

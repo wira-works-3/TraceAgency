@@ -39,6 +39,7 @@ export default function AllArticlesPage() {
                     src={article.image}
                     alt={article.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    style={{ objectPosition: article.objectPosition ?? "50% 20%" }}
                     loading="lazy"
                   />
                   {article.category && (

@@ -56,11 +56,12 @@ export default async function ArticleDetail({ params }) {
           </header>
 
           {/* Hero Image */}
-          <div className="relative w-full aspect-[16/10] md:aspect-auto md:h-[600px] min-h-[240px] rounded-3xl overflow-hidden mb-16 bg-surface">
+          <div className="relative w-full aspect-[4/3] md:aspect-auto md:h-[600px] min-h-[240px] rounded-3xl overflow-hidden mb-16 bg-surface">
             <img
               src={article.image}
               alt={article.title}
               className="w-full h-full object-cover"
+              style={{ objectPosition: article.objectPosition ?? "50% 20%" }}
             />
           </div>
 
@@ -71,31 +72,39 @@ export default async function ArticleDetail({ params }) {
             </p>
             
             <p>
-              Dalam dunia event marketing yang terus berkembang, memilih talent yang tepat bukan lagi sekadar soal penampilan fisik. Talent, baik itu SPG (Sales Promotion Girl), Usher, maupun MC, adalah wajah dari brand Anda di garis depan. Mereka adalah titik kontak pertama antara produk Anda dan calon konsumen.
+              Dalam dunia event marketing yang terus berkembang, memilih talent yang tepat bukan lagi sekadar soal penampilan fisik.
+            </p>
+            <p>
+              Talent, baik itu SPG (Sales Promotion Girl), Usher, maupun MC, adalah wajah dari brand Anda di garis depan. Mereka adalah titik kontak pertama antara produk Anda dan calon konsumen.
             </p>
 
             <h2>Mengapa Pemilihan Talent Sangat Krusial?</h2>
             <p>
-              Banyak perusahaan masih menganggap remeh proses seleksi talent untuk event mereka. Padahal, riset menunjukkan bahwa lebih dari 60% pengunjung event akan mengingat interaksi mereka dengan staf *booth* lebih dari sekadar melihat produk itu sendiri. Seorang SPG yang komunikatif dan memahami *product knowledge* dengan baik dapat meningkatkan konversi penjualan secara drastis dibandingkan dengan SPG yang hanya berdiri membagikan brosur.
+              Banyak perusahaan masih menganggap remeh proses seleksi talent untuk event mereka. Padahal, riset menunjukkan bahwa lebih dari 60% pengunjung event akan mengingat interaksi mereka dengan staf <em>booth</em> lebih dari sekadar melihat produk itu sendiri.
+            </p>
+            <p>
+              Seorang SPG yang komunikatif dan memahami <em>product knowledge</em> dengan baik dapat meningkatkan konversi penjualan secara drastis dibandingkan dengan SPG yang hanya berdiri membagikan brosur.
             </p>
 
-            <h3>1. SPG vs Usher: Kenali Perbedaannya</h3>
+            <h3>SPG vs Usher: Kenali Perbedaannya</h3>
             <p>
               Seringkali klien kami tertukar antara kebutuhan akan SPG dan Usher. Mari kita perjelas:
             </p>
             <ul>
               <li><strong>SPG / SPB (Sales Promotion):</strong> Fokus utama mereka adalah <em>selling</em> dan <em>educating</em>. Mereka harus proaktif mendekati pengunjung, menjelaskan detail teknis produk, dan mendorong terjadinya transaksi.</li>
-              <li><strong>Usher:</strong> Fokus utama mereka adalah <em>hospitality</em> dan <em>brand image</em>. Tugas mereka adalah menyambut tamu VVIP, mengarahkan tempat duduk, memegang plakat penghargaan, atau berdiri di area *photobooth*. Mereka mengutamakan keanggunan dan kesopanan.</li>
+              <li>
+                <strong>Usher:</strong> Fokus utama mereka adalah <em>hospitality</em> dan <em>brand image</em>. Tugas mereka adalah menyambut tamu VVIP, mengarahkan tempat duduk, memegang plakat penghargaan, atau berdiri di area <em>photobooth</em>. Mereka mengutamakan keanggunan dan kesopanan.
+              </li>
             </ul>
 
-            <h3>2. Menyesuaikan Talent dengan Brand Persona</h3>
+            <h3>Menyesuaikan Talent dengan Brand Persona</h3>
             <p>
-              Jika brand Anda adalah produk otomotif *sport*, Anda mungkin membutuhkan talent dengan karakter *energetic* dan *bold*. Sebaliknya, jika Anda meluncurkan produk kosmetik premium, Anda membutuhkan talent dengan tampilan *flawless* dan pembawaan yang elegan. Di Trace Agency, kami selalu melakukan *screening* ketat tidak hanya dari segi fisik, tapi juga karakter dan gaya komunikasi talent agar 100% *match* dengan DNA brand Anda.
+              Jika brand Anda adalah produk otomotif <em>sport</em>, Anda mungkin membutuhkan talent dengan karakter <em>energetic</em> dan <em>bold</em>. Sebaliknya, jika Anda meluncurkan produk kosmetik premium, Anda membutuhkan talent dengan tampilan <em>flawless</em> dan pembawaan yang elegan. Di Trace Agency, kami selalu melakukan <em>screening</em> ketat tidak hanya dari segi fisik, tapi juga karakter dan gaya komunikasi talent agar 100% <em>match</em> dengan DNA brand Anda.
             </p>
 
             <h2>Kesimpulan</h2>
             <p>
-              Jangan biarkan event yang sudah Anda rencanakan berbulan-bulan gagal hanya karena *human error* di lapangan. Bekerjasamalah dengan agensi HR yang terpercaya untuk memastikan setiap talent yang bertugas telah dibekali dengan *attitude*, *grooming*, dan *product knowledge* yang paripurna.
+              Jangan biarkan event yang sudah Anda rencanakan berbulan-bulan gagal hanya karena <em>human error</em> di lapangan. Bekerjasamalah dengan agensi HR yang terpercaya untuk memastikan setiap talent yang bertugas telah dibekali dengan <em>attitude</em>, <em>grooming</em>, dan <em>product knowledge</em> yang paripurna.
             </p>
           </div>
 

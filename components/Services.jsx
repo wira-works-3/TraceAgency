@@ -46,7 +46,7 @@ const services = [
   {
     id: 3,
     title: "Model & Talent",
-    tags: ["Pemotretan", "TVC", "Fashion"],
+    tags: ["Pemotretan", "TVC", "Sosmed"],
     description: "Model photoshoot, video komersial, dan talent berbakat untuk kebutuhan kampanye kreatif brand Anda. Wajah representatif untuk berbagai konsep visual.",
     bg: "bg-[#111111]",
     images: ["/Talent/Talent-1.JPG"]
@@ -85,7 +85,8 @@ export default function Services() {
     "/traceagency.png";
 
   const imageObjectPositions = {
-    "/SPG/SPG-5.JPG": "50% 20%",
+    "/SPG/SPG-1.JPG": "50% 58%",
+    "/SPG/SPG-5.JPG": "50% 26%",
     "/Usher/Usher-1.jpg": "50% 18%",
     "/Usher/Usher-2.JPG": "50% 18%",
     "/Usher/Usher-3.JPG": "50% 18%",
@@ -95,6 +96,14 @@ export default function Services() {
 
   const activeImageObjectPosition =
     imageObjectPositions[activeImageSrc] ?? "50% 50%";
+
+  // Override khusus mobile untuk SPG-5 biar framing lebih "turun"
+  const mobileAdjustedObjectPosition =
+    !isDesktop && activeImageSrc === "/SPG/SPG-5.JPG"
+      ? "50% 50%"
+      : !isDesktop && activeImageSrc === "/SPG/SPG-1.JPG"
+        ? "50% 100%"
+        : activeImageObjectPosition;
 
   const goPrevImage = (event) => {
     event.stopPropagation();
@@ -168,11 +177,14 @@ export default function Services() {
                   >
                     {/* Left: 16:9 Image */}
                     <div className="w-full lg:w-1/2 h-[320px] md:h-[280px] lg:h-full rounded-3xl overflow-hidden relative">
-                      <img 
+                        <img 
                         src={activeImageSrc} 
                         alt={service.title} 
                         className="w-full h-full object-cover"
-                        style={{ objectPosition: activeImageObjectPosition }}
+                        style={{
+                          objectPosition: mobileAdjustedObjectPosition,
+                          transform: activeImageSrc === "/SPG/SPG-1.JPG" ? "scale(1.03)" : undefined,
+                        }}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
 

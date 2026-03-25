@@ -6,8 +6,11 @@ export const articlesData = [
     excerpt:
       "Memilih talent yang tepat adalah kunci kesuksesan event. Ketahui perbedaan peran SPG dan Usher serta tips memilih talent yang sesuai dengan brand image Anda.",
     date: "12 Okt 2023",
-    image: "/Usher/Usher-12.jpg",
+    image: "/Usher/Usher-8.JPG",
     category: "Tips & Trik",
+    // Kontrol posisi gambar saat `object-fit: cover` agar tidak kepotong.
+    // Format: "50% <angka>" (angka lebih besar = fokus lebih ke bawah, lebih kecil = fokus lebih ke atas)
+    objectPosition: "50% 60%",
   },
   {
     id: "2",
@@ -15,8 +18,9 @@ export const articlesData = [
     excerpt:
       "Dari interaksi hybrid hingga personalisasi, temukan tren event marketing terbaru untuk meningkatkan engagement.",
     date: "05 Okt 2023",
-    image: "/SPG/SPG-7.JPG",
+    image: "/Usher/Usher-9.jpg",
     category: "Marketing",
+    objectPosition: "50% 5%",
   },
   {
     id: "3",
@@ -24,8 +28,9 @@ export const articlesData = [
     excerpt:
       "Mengapa penampilan dan sikap profesional sangat penting saat mewakili sebuah brand di lapangan.",
     date: "28 Sep 2023",
-    image: "/Talent/Talent-1.JPG",
+    image: "/Usher/Usher-16.jpg",
     category: "Grooming",
+    objectPosition: "50% 0%",
   },
   {
     id: "4",
@@ -33,8 +38,9 @@ export const articlesData = [
     excerpt:
       "Studi kasus bagaimana kolaborasi talent yang tepat meningkatkan konversi penjualan hingga 40%.",
     date: "15 Sep 2023",
-    image: "/MC/MC-1.jpg",
+    image: "/SPG/SPG-10.JPG",
     category: "Case Study",
+    objectPosition: "50% 55%",
   },
 ];
 

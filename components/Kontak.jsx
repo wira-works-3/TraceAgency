@@ -7,16 +7,42 @@ import { Mail, Phone, Instagram, Send, Loader2, CheckCircle } from "lucide-react
 export default function Kontak() {
   const [formState, setFormState] = useState("idle"); // idle, loading, success, error
 
-  const handleSubmit = (e) => {
+  const FORM_ACCESS_KEY = "307d894a-b4fd-4227-8158-db348d8511df";
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setFormState("loading");
-    
-    // Simulate API call
-    setTimeout(() => {
-      setFormState("success");
-      // Reset after 3 seconds
+
+    try {
+      const formData = new FormData(e.target);
+      formData.append("access_key", FORM_ACCESS_KEY);
+
+      // Beberapa konfigurasi Web3Forms mengandalkan field bernama "email".
+      // Karena input kita label-nya "Email / WhatsApp", kita copy nilainya ke "email" juga.
+      const emailOrWa = formData.get("email_whatsapp");
+      if (emailOrWa) {
+        formData.set("email", String(emailOrWa));
+      }
+
+      const response = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (data?.success) {
+        setFormState("success");
+        e.target.reset();
+        setTimeout(() => setFormState("idle"), 3000);
+      } else {
+        setFormState("error");
+        setTimeout(() => setFormState("idle"), 3000);
+      }
+    } catch (err) {
+      setFormState("error");
       setTimeout(() => setFormState("idle"), 3000);
-    }, 1500);
+    }
   };
 
   return (
@@ -38,7 +64,7 @@ export default function Kontak() {
               <span className="text-text-secondary">sesuatu yang luar biasa?</span>
             </h2>
             <p className="text-lg text-text-secondary leading-relaxed mb-12 max-w-md">
-              Punya ide event atau butuh talent profesional untuk kampanye Anda? Hubungi kami sekarang dan mari wujudkan visi Anda bersama Trace Agency.
+              Butuh talent profesional untuk event Anda? Hubungi kami sekarang dan mari wujudkan event Anda bersama Trace Agency.
             </p>
 
             <div className="space-y-8">
@@ -112,11 +138,23 @@ export default function Kontak() {
                 </motion.div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-6">
+                  {formState === "error" ? (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                      transition={{ duration: 0.25, ease: "easeOut" }}
+                      className="text-sm text-red-200 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3"
+                    >
+                      Gagal mengirim pesan. Silakan coba lagi.
+                    </motion.div>
+                  ) : null}
                   <div>
                     <label htmlFor="name" className="block text-xs font-semibold text-text-secondary uppercase tracking-widest mb-3">Nama Lengkap</label>
                     <input 
                       type="text" 
                       id="name" 
+                      name="name"
                       required
                       className="w-full bg-background border border-border rounded-xl px-5 py-4 text-foreground focus:outline-none focus:border-text-secondary transition-all"
                       placeholder="John Doe"
@@ -128,6 +166,7 @@ export default function Kontak() {
                     <input 
                       type="text" 
                       id="contact" 
+                      name="email_whatsapp"
                       required
                       className="w-full bg-background border border-border rounded-xl px-5 py-4 text-foreground focus:outline-none focus:border-text-secondary transition-all"
                       placeholder="john@example.com"
@@ -138,6 +177,7 @@ export default function Kontak() {
                     <label htmlFor="message" className="block text-xs font-semibold text-text-secondary uppercase tracking-widest mb-3">Kebutuhan / Pesan</label>
                     <textarea 
                       id="message" 
+                      name="message"
                       required
                       rows={5}
                       className="w-full bg-background border border-border rounded-xl px-5 py-4 text-foreground focus:outline-none focus:border-text-secondary transition-all resize-none"

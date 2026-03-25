@@ -5,10 +5,12 @@ import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion"
 
 const galleryImages = [
   { id: 1, src: "/Usher/Usher-12.jpg", label: "Usher", desc: "Handling tamu dan VIP dengan profesional" },
-  { id: 2, src: "/SPG/SPG-7.JPG", label: "SPG & SPB", desc: "Brand activation dan sales support" },
+  { id: 2, src: "/SPG/SPG-9.JPG", label: "SPG & SPB", desc: "Brand activation dan sales support" },
   { id: 3, src: "/Usher/Usher-1.jpg", label: "Usher", desc: "First impression yang elegan" },
-  { id: 4, src: "/Usher/Usher-6.JPG", label: "Usher", desc: "On-ground event support" },
+  { id: 4, src: "/Usher/Usher-9.jpg", label: "Usher", desc: "On-ground event support" },
   { id: 5, src: "/Usher/Usher-14.jpg", label: "Usher", desc: "Event flow yang rapi dan terarah" },
+  { id: 6, src: "/Usher/Usher-8.JPG", label: "Usher", desc: "Handling tamu dan VIP dengan profesional" },
+  { id: 7, src: "/Usher/Usher-16.jpg", label: "Usher", desc: "Event flow yang rapi dan terarah" },
 ];
 
 export default function Gallery() {
@@ -44,10 +46,13 @@ export default function Gallery() {
       const viewportWidth = targetRef.current?.clientWidth ?? window.innerWidth;
       const viewportHeight = window.innerHeight;
       const fullWidth = scrollerRef.current?.scrollWidth ?? 0;
-      const nextMaxTranslateX = Math.max(0, fullWidth - viewportWidth);
+      const isLg = window.innerWidth >= 1024;
+      // Buffer kecil supaya item paling kanan bisa kebawa,
+      // tapi tidak terlalu jauh (biar pergeseran tidak terasa "kebesaran").
+      const buffer = isLg ? -100 : 10;
+      const nextMaxTranslateX = Math.max(0, fullWidth - viewportWidth) + buffer;
       setMaxTranslateX(nextMaxTranslateX);
 
-      const isLg = window.innerWidth >= 1024;
       const scrollFactor = isLg ? 0.85 : 0.9;
       const minHeight = viewportHeight * (isLg ? 2.5 : 2.3);
       const nextScrollAreaHeight = Math.max(
@@ -80,9 +85,9 @@ export default function Gallery() {
           </div>
           <div className="text-center w-full md:w-auto">
             <h2 className="text-5xl md:text-7xl lg:text-8xl font-black text-foreground uppercase leading-none tracking-tighter">
-              Kami wujudkan
+              Partner Event
               <br />
-              kesuksesan acara Anda
+              Profesional dan Terpercaya
             </h2>
           </div>
           <div className="hidden md:block w-32">

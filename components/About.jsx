@@ -46,28 +46,17 @@ function AnimatedCounter({ from = 0, to, duration = 2, suffix = "" }) {
 function ScrollRevealText({ text }) {
   const words = text.split(" ");
 
-  // Daftar kata-kata kunci yang akan disorot dengan warna putih terang
-  const highlightedWords = [
-    "terkemuka", 
-    "profesional", 
-    "berpengalaman.", 
-    "talent", 
-    "SPG,", 
-    "Usher,", 
-    "MC", 
-    "mendefinisikan", 
-    "ulang",
-    "kesuksesan"
-  ];
+  // Untuk versi ini, semua kata berubah menjadi putih agar tidak selang-seling.
+  const highlightedWords = null;
 
   return (
     <div className="flex flex-wrap gap-x-2 gap-y-1 mb-8">
       {words.map((word, i) => {
-        // Cek apakah kata saat ini termasuk dalam daftar kata yang di-highlight
-        const isHighlighted = highlightedWords.includes(word);
+        // (Tidak dipakai lagi, tapi dibiarkan agar struktur tetap aman)
+        const isHighlighted = false;
         
-        // Jika di-highlight, gunakan warna putih, jika tidak gunakan abu-abu/silver dari tema (text-text-secondary yang biasanya #a0a0a0)
-        const targetColor = isHighlighted ? "#ffffff" : "#a0a0a0"; 
+        // Semua kata dibuat putih saat animasi muncul.
+        const targetColor = "#ffffff";
 
         return (
           <motion.span 
@@ -124,7 +113,7 @@ export default function About() {
             </span>
           </div>
           
-          <ScrollRevealText text="Kami adalah agensi Human Resources terkemuka yang didirikan oleh profesional berpengalaman. Kami menyediakan talent profesional seperti SPG, Usher, dan MC yang mendefinisikan ulang standar kesuksesan event Anda." />
+          <ScrollRevealText text="Trace agency menyediakan talent event seperti SPG/SPB, Usher, dan MC. Tim kami sudah berpengalaman dan profesional sehingga kami siap membantu dan membuat event menjadi lebih hidup dan berkesan." />
           
           <div className="flex gap-4 mt-12 flex-wrap">
             <a
@@ -178,7 +167,7 @@ export default function About() {
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-3 h-3 rounded-full bg-gray-400"></div>
                 <h4 className="text-6xl md:text-8xl font-bold text-foreground">
-                  <AnimatedCounter from={0} to={200} duration={2.5} suffix="+" />
+                  <AnimatedCounter from={0} to={500} duration={2.5} suffix="+" />
                 </h4>
               </div>
               <p className="text-xl text-text-secondary pl-6">Project Selesai</p>
@@ -188,7 +177,7 @@ export default function About() {
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-3 h-3 rounded-full bg-gray-600"></div>
                 <h4 className="text-6xl md:text-8xl font-bold text-foreground">
-                  <AnimatedCounter from={0} to={500} duration={2.5} suffix="+" />
+                  <AnimatedCounter from={0} to={8000} duration={2.5} suffix="" />
                 </h4>
               </div>
               <p className="text-xl text-text-secondary pl-6">Talent Profesional</p>

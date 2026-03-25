@@ -33,7 +33,25 @@ export default function VideoShowcase() {
   );
 
   const getObjectPosition = (src) => {
-    return imageObjectPositions[src] ?? "50% 50%";
+    // Override per-gambar (dipisah mobile & desktop) supaya bisa kamu kontrol manual.
+    const mobileObjectPositions = {
+      // Mobile
+      "/SPG/SPG-5.JPG": "50% 40%",
+      "/SPG/SPG-8.JPG": "50% 40%",
+    };
+
+    const desktopObjectPositions = {
+      // Desktop: sesuai request (50% 40% sebagai perbandingan)
+      "/SPG/SPG-3.jpg": "50% 40%",
+      "/SPG/SPG-5.JPG": "50% 40%",
+      "/SPG/SPG-8.JPG": "50% 40%",
+    };
+
+    if (isNarrowScreen) {
+      return mobileObjectPositions[src] ?? imageObjectPositions[src] ?? "50% 50%";
+    }
+
+    return desktopObjectPositions[src] ?? imageObjectPositions[src] ?? "50% 50%";
   };
 
   const categories = useMemo(

@@ -42,6 +42,7 @@ export default function Artikel() {
                   src={featuredArticle.image}
                   alt={featuredArticle.title}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  style={{ objectPosition: featuredArticle.objectPosition ?? "50% 30%" }}
                   loading="lazy"
                 />
                 <div className="absolute top-6 left-6 bg-background/80 backdrop-blur-md text-foreground border border-border px-4 py-2 rounded-full text-xs font-bold tracking-widest uppercase">
@@ -75,6 +76,7 @@ export default function Artikel() {
                       src={article.image}
                       alt={article.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                      style={{ objectPosition: article.objectPosition ?? "50% 50%" }}
                       loading="lazy"
                     />
                   </div>
