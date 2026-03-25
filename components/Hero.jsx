@@ -2,9 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
-import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+const WA_URL = "https://wa.me/6285191641608";
 
 export default function Hero() {
+  const pathname = usePathname();
   const { scrollY } = useScroll();
   const y = useTransform(scrollY, [0, 1000], [0, 300]);
   const opacity = useTransform(scrollY, [0, 500], [1, 0]);
@@ -92,6 +95,18 @@ export default function Hero() {
     visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } },
   };
 
+  const handleLayananClick = (e) => {
+    if (pathname !== "/") return;
+    e.preventDefault();
+    const el = document.getElementById("services");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (window.history.replaceState) {
+        window.history.replaceState(null, "", window.location.pathname);
+      }
+    }
+  };
+
   return (
     <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden bg-background">
       
@@ -145,18 +160,21 @@ export default function Hero() {
           </motion.p>
           
           <motion.div variants={itemVariants} className="flex flex-row gap-4 w-full sm:w-auto justify-center">
-            <Link 
-              href="#services"
+            <a
+              href="/#services"
+              onClick={handleLayananClick}
               className="px-6 py-4 rounded-full bg-foreground text-background text-sm md:text-base font-semibold hover:bg-gray-200 transition-all flex items-center justify-center flex-1 sm:flex-none min-w-[140px]"
             >
               Layanan Kami
-            </Link>
-            <Link 
-              href="#kontak"
+            </a>
+            <a
+              href={WA_URL}
+              target="_blank"
+              rel="noopener noreferrer"
               className="px-6 py-4 rounded-full bg-surface text-foreground border border-border text-sm md:text-base font-semibold hover:bg-surface/80 transition-all flex items-center justify-center flex-1 sm:flex-none min-w-[140px]"
             >
               Hubungi Kami
-            </Link>
+            </a>
           </motion.div>
         </motion.div>
       </motion.div>

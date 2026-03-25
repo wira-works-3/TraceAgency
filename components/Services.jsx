@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
-import Link from "next/link";
+
+const WA_URL = "https://wa.me/6285191641608";
 
 const services = [
   {
@@ -124,12 +125,14 @@ export default function Services() {
               <span className="text-foreground">menjadi pengalaman berkesan</span>
             </h2>
           </div>
-          <Link 
-            href="#kontak"
-            className="px-6 py-3 rounded-full bg-foreground text-background text-sm font-semibold hover:bg-gray-200 transition-all"
+          <a
+            href={WA_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-6 py-3 rounded-full bg-foreground text-background text-sm font-semibold hover:bg-gray-200 transition-all inline-block text-center"
           >
             Konsultasi Sekarang
-          </Link>
+          </a>
         </div>
 
         {/* Accordion / Expandable Cards Layout */}
@@ -213,9 +216,15 @@ export default function Services() {
                         {service.description}
                       </p>
                       
-                      <button className="mt-auto w-fit px-8 py-4 rounded-full bg-foreground text-background text-sm font-bold hover:bg-gray-200 transition-colors flex items-center justify-center gap-3 group/btn">
+                      <a
+                        href={WA_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="mt-auto w-fit px-8 py-4 rounded-full bg-foreground text-background text-sm font-bold hover:bg-gray-200 transition-colors flex items-center justify-center gap-3 group/btn"
+                      >
                         Detail Layanan <ArrowRight size={18} className="group-hover/btn:translate-x-1 transition-transform" />
-                      </button>
+                      </a>
                     </div>
                   </motion.div>
                 ) : (

@@ -2,7 +2,9 @@
 
 import { useEffect, useState, useRef } from "react";
 import { motion, useInView, useScroll, useTransform } from "framer-motion";
-import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+const WA_URL = "https://wa.me/6285191641608";
 
 // Komponen helper untuk efek hitung mundur (counting)
 function AnimatedCounter({ from = 0, to, duration = 2, suffix = "" }) {
@@ -89,6 +91,20 @@ function ScrollRevealText({ text }) {
 }
 
 export default function About() {
+  const pathname = usePathname();
+
+  const handleLayananClick = (e) => {
+    if (pathname !== "/") return;
+    e.preventDefault();
+    const el = document.getElementById("services");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (window.history.replaceState) {
+        window.history.replaceState(null, "", window.location.pathname);
+      }
+    }
+  };
+
   return (
     <section id="about" className="py-32 bg-background relative overflow-hidden">
       {/* Subtle background waves/lines could be added here */}
@@ -110,19 +126,22 @@ export default function About() {
           
           <ScrollRevealText text="Kami adalah agensi Human Resources terkemuka yang didirikan oleh profesional berpengalaman. Kami menyediakan talent profesional seperti SPG, Usher, dan MC yang mendefinisikan ulang standar kesuksesan event Anda." />
           
-          <div className="flex gap-4 mt-12">
-            <Link 
-              href="#kontak"
+          <div className="flex gap-4 mt-12 flex-wrap">
+            <a
+              href={WA_URL}
+              target="_blank"
+              rel="noopener noreferrer"
               className="px-8 py-4 rounded-full bg-foreground text-background text-base font-semibold hover:bg-gray-200 transition-all flex items-center justify-center"
             >
               Hubungi Kami
-            </Link>
-            <Link 
-              href="#services"
+            </a>
+            <a
+              href="/#services"
+              onClick={handleLayananClick}
               className="px-8 py-4 rounded-full bg-surface text-foreground border border-border text-base font-semibold hover:bg-surface/80 transition-all flex items-center justify-center"
             >
               Layanan Kami
-            </Link>
+            </a>
           </div>
         </motion.div>
 

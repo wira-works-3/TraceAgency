@@ -15,7 +15,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata = {
-  title: "Trace Agency — Visual Storytelling & Creative Production",
+  title: "Trace Agency",
   description: "Trace Agency menghadirkan produksi visual, branding, dan kampanye kreatif—lihat portofolio kami dan konsultasikan kebutuhanmu.",
   openGraph: {
     title: "Trace Agency — Visual Storytelling & Creative Production",
