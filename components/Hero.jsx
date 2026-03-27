@@ -185,10 +185,10 @@ export default function Hero() {
         <div className="flex w-full whitespace-nowrap overflow-hidden">
           <div className="animate-marquee flex gap-12 items-center px-6">
             {/* Repeated logos for infinite scroll effect */}
-            {['Big Hersman', 'Armani Exchange', 'Pertamina', 'BEI / IDX', 'BCA', 'Digibank', 'Grab', 'Orangtua Group', 'Mayora', 'Teh Pucuk Harum', 'Pepsico', 'Hush Puppies', 'AEON Mall', 'Richs', 'Tigac', 'Blackjack'].map((logo, i) => (
+            {['Big Hersman', 'Armani Exchange', 'Pertamina', 'BEI / IDX', 'BCA', 'Digibank', 'Grab', 'Orangtua Group', 'Mayora', 'Teh Pucuk Harum', 'Pepsico', 'Hush Puppies', 'AEON Mall', 'Richs', 'Tigac', 'Blackjack', 'UPPF', 'Oumier', 'UBS Gold', 'CNI', 'ADIDAS', 'Moist Diane', 'Lalamove', 'Honda', 'Yamaha', 'Indofood', 'Dekson', 'CS Food', 'LPKN', 'Djarum', 'Mandiri', 'Xiaomi', 'Maybank', 'Tolak Angin', 'Ecova', 'Aqua', 'VinFast', 'GoPay', 'Phillips', 'Hikvision', 'Manulife', 'Allianz'].map((logo, i) => (
               <span key={i} className="text-xl font-bold text-text-secondary mix-blend-plus-lighter">{logo}</span>
             ))}
-            {['Big Hersman', 'Armani Exchange', 'Pertamina', 'BEI / IDX', 'BCA', 'Digibank', 'Grab', 'Orangtua Group', 'Mayora', 'Teh Pucuk Harum', 'Pepsico', 'Hush Puppies', 'AEON Mall', 'Richs', 'Tigac', 'Blackjack'].map((logo, i) => (
+            {['Big Hersman', 'Armani Exchange', 'Pertamina', 'BEI / IDX', 'BCA', 'Digibank', 'Grab', 'Orangtua Group', 'Mayora', 'Teh Pucuk Harum', 'Pepsico', 'Hush Puppies', 'AEON Mall', 'Richs', 'Tigac', 'Blackjack', 'UPPF', 'Oumier', 'UBS Gold', 'CNI', 'ADIDAS', 'Moist Diane', 'Lalamove', 'Honda', 'Yamaha', 'Indofood', 'Dekson', 'CS Food', 'LPKN', 'Djarum', 'Mandiri', 'Xiaomi', 'Maybank', 'Tolak Angin', 'Ecova', 'Aqua', 'VinFast', 'GoPay', 'Phillips', 'Hikvision', 'Manulife', 'Allianz'].map((logo, i) => (
               <span key={`dup-${i}`} className="text-xl font-bold text-text-secondary mix-blend-plus-lighter">{logo}</span>
             ))}
           </div>
