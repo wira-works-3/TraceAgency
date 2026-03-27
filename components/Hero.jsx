@@ -140,7 +140,7 @@ export default function Hero() {
           className="flex flex-col items-center"
         >
           <motion.div variants={itemVariants} className="inline-block mb-6 px-4 py-1.5 rounded-full border border-border text-text-secondary text-xs font-semibold tracking-[0.2em] uppercase">
-            Agency SPG/SPB
+            Agency SPG & USHER
           </motion.div>
           
           <motion.h1 
