@@ -3,6 +3,37 @@ import Footer from "@/components/Footer";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { articlesData } from "@/data/articles";
+import { WHATSAPP_LINK } from "@/lib/whatsapp";
+
+export async function generateMetadata({ params }) {
+  const resolvedParams = await params;
+  const article = articlesData.find((item) => item.id === resolvedParams.id);
+
+  if (!article) {
+    return {
+      title: "Artikel Tidak Ditemukan",
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
+  }
+
+  return {
+    title: article.title,
+    description: article.excerpt,
+    alternates: {
+      canonical: `/artikel/${article.id}`,
+    },
+    openGraph: {
+      title: article.title,
+      description: article.excerpt,
+      url: `/artikel/${article.id}`,
+      type: "article",
+      images: article.image ? [{ url: article.image }] : undefined,
+    },
+  };
+}
 
 // Karena ini adalah app router Next.js, params di Server Component harus di-await (Promise) di Next 15+
 export default async function ArticleDetail({ params }) {
@@ -65,47 +96,54 @@ export default async function ArticleDetail({ params }) {
             />
           </div>
 
-          {/* Article Content (Dummy Content) */}
-          <div className="prose prose-invert prose-lg max-w-none prose-p:text-text-secondary prose-headings:text-foreground prose-a:text-white">
-            <p className="lead text-xl md:text-2xl text-foreground font-medium mb-8">
-              {article.excerpt}
-            </p>
-            
-            <p>
-              Dalam dunia event marketing yang terus berkembang, memilih talent yang tepat bukan lagi sekadar soal penampilan fisik.
-            </p>
-            <p>
-              Talent, baik itu SPG (Sales Promotion Girl), Usher, maupun MC, adalah wajah dari brand Anda di garis depan. Mereka adalah titik kontak pertama antara produk Anda dan calon konsumen.
+          {/* Article Content */}
+          <div className="max-w-none text-foreground text-lg leading-relaxed space-y-8">
+            <p className="text-xl md:text-2xl text-foreground font-medium leading-relaxed">
+              {article.content?.intro ?? article.excerpt}
             </p>
 
-            <h2>Mengapa Pemilihan Talent Sangat Krusial?</h2>
-            <p>
-              Banyak perusahaan masih menganggap remeh proses seleksi talent untuk event mereka. Padahal, riset menunjukkan bahwa lebih dari 60% pengunjung event akan mengingat interaksi mereka dengan staf <em>booth</em> lebih dari sekadar melihat produk itu sendiri.
-            </p>
-            <p>
-              Seorang SPG yang komunikatif dan memahami <em>product knowledge</em> dengan baik dapat meningkatkan konversi penjualan secara drastis dibandingkan dengan SPG yang hanya berdiri membagikan brosur.
-            </p>
+            {article.content?.servicesTitle ? (
+              <div className="space-y-4">
+                <h2 className="text-2xl md:text-3xl font-bold text-foreground">
+                  {article.content.servicesTitle}
+                </h2>
+                {article.content?.services?.length ? (
+                  <ul className="list-disc pl-6 md:pl-8 space-y-2 marker:text-foreground">
+                    {article.content.services.map((service) => (
+                      <li key={service}>{service}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            ) : null}
 
-            <h3>SPG vs Usher: Kenali Perbedaannya</h3>
-            <p>
-              Seringkali klien kami tertukar antara kebutuhan akan SPG dan Usher. Mari kita perjelas:
-            </p>
-            <ul>
-              <li><strong>SPG / SPB (Sales Promotion):</strong> Fokus utama mereka adalah <em>selling</em> dan <em>educating</em>. Mereka harus proaktif mendekati pengunjung, menjelaskan detail teknis produk, dan mendorong terjadinya transaksi.</li>
-              <li>
-                <strong>Usher:</strong> Fokus utama mereka adalah <em>hospitality</em> dan <em>brand image</em>. Tugas mereka adalah menyambut tamu VVIP, mengarahkan tempat duduk, memegang plakat penghargaan, atau berdiri di area <em>photobooth</em>. Mereka mengutamakan keanggunan dan kesopanan.
-              </li>
-            </ul>
+            {article.content?.reasonsTitle ? (
+              <div className="space-y-4">
+                <h2 className="text-2xl md:text-3xl font-bold text-foreground">
+                  {article.content.reasonsTitle}
+                </h2>
+                {article.content?.reasons?.length ? (
+                  <ol className="list-decimal pl-6 md:pl-8 space-y-2 marker:text-foreground">
+                    {article.content.reasons.map((reason) => (
+                      <li key={reason}>{reason}</li>
+                    ))}
+                  </ol>
+                ) : null}
+              </div>
+            ) : null}
 
-            <h3>Menyesuaikan Talent dengan Brand Persona</h3>
-            <p>
-              Jika brand Anda adalah produk otomotif <em>sport</em>, Anda mungkin membutuhkan talent dengan karakter <em>energetic</em> dan <em>bold</em>. Sebaliknya, jika Anda meluncurkan produk kosmetik premium, Anda membutuhkan talent dengan tampilan <em>flawless</em> dan pembawaan yang elegan. Di Trace Agency, kami selalu melakukan <em>screening</em> ketat tidak hanya dari segi fisik, tapi juga karakter dan gaya komunikasi talent agar 100% <em>match</em> dengan DNA brand Anda.
-            </p>
+            {article.content?.cta ? (
+              <p className="text-foreground font-semibold">{article.content.cta}</p>
+            ) : null}
 
-            <h2>Kesimpulan</h2>
-            <p>
-              Jangan biarkan event yang sudah Anda rencanakan berbulan-bulan gagal hanya karena <em>human error</em> di lapangan. Bekerjasamalah dengan agensi HR yang terpercaya untuk memastikan setiap talent yang bertugas telah dibekali dengan <em>attitude</em>, <em>grooming</em>, dan <em>product knowledge</em> yang paripurna.
-            </p>
+            {article.content?.whatsappLabel ? (
+              <p className="text-foreground font-semibold">
+                <span className="text-foreground font-semibold">WhatsApp: </span>
+                <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="hover:underline underline-offset-4">
+                  {article.content.whatsappLabel.replace("WhatsApp: ", "")}
+                </a>
+              </p>
+            ) : null}
           </div>
 
           {/* Share / Footer Article */}

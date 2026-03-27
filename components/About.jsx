@@ -3,8 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { motion, useInView, useScroll, useTransform } from "framer-motion";
 import { usePathname } from "next/navigation";
-
-const WA_URL = "https://wa.me/6285191641608";
+import { WHATSAPP_LINK } from "@/lib/whatsapp";
 
 // Komponen helper untuk efek hitung mundur (counting)
 function AnimatedCounter({ from = 0, to, duration = 2, suffix = "" }) {
@@ -61,7 +60,7 @@ function ScrollRevealText({ text }) {
         return (
           <motion.span 
             key={i} 
-            className="text-3xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight text-[#1a1a1a]" // Warna awal sangat gelap/samar (tapi tetap ada)
+            className="text-[clamp(1.5rem,3.1vw,2.75rem)] font-bold leading-[1.15] tracking-tight text-[#1a1a1a]" // Ukuran dikunci agar tetap proporsional saat zoom
             initial={{ color: "#1a1a1a" }} // Mulai dari abu-abu yang sangat gelap (nyaris hitam)
             whileInView={{ color: targetColor }} // Menyala ke warna target saat di-scroll
             viewport={{ once: true, margin: "-10%" }}
@@ -117,7 +116,7 @@ export default function About() {
           
           <div className="flex gap-4 mt-12 flex-wrap">
             <a
-              href={WA_URL}
+              href={WHATSAPP_LINK}
               target="_blank"
               rel="noopener noreferrer"
               className="px-8 py-4 rounded-full bg-foreground text-background text-base font-semibold hover:bg-gray-200 transition-all flex items-center justify-center"
@@ -157,7 +156,7 @@ export default function About() {
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-3 h-3 rounded-full bg-white"></div>
                 <h4 className="text-6xl md:text-8xl font-bold text-foreground">
-                  <AnimatedCounter from={0} to={100} duration={2.5} suffix="+" />
+                  <AnimatedCounter from={0} to={300} duration={2.5} suffix="+" />
                 </h4>
               </div>
               <p className="text-xl text-text-secondary pl-6">Kolaborasi Brand</p>
@@ -177,7 +176,7 @@ export default function About() {
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-3 h-3 rounded-full bg-gray-600"></div>
                 <h4 className="text-6xl md:text-8xl font-bold text-foreground">
-                  <AnimatedCounter from={0} to={8000} duration={2.5} suffix="" />
+                  <AnimatedCounter from={0} to={8000} duration={2.5} suffix="+" />
                 </h4>
               </div>
               <p className="text-xl text-text-secondary pl-6">Talent Profesional</p>

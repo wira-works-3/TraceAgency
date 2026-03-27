@@ -16,21 +16,54 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata = {
-  title: "Trace Agency",
-  description: "Trace Agency menghadirkan produksi visual, branding, dan kampanye kreatif—lihat portofolio kami dan konsultasikan kebutuhanmu.",
+  metadataBase: new URL("https://traceagency.com"),
+  title: {
+    default: "Trace Agency | Agency SPG, SPB, Usher, MC Profesional",
+    template: "%s | Trace Agency",
+  },
+  description:
+    "Trace Agency menyediakan jasa SPG, SPB, Usher, MC, dan talent event profesional untuk event, pameran, dan aktivasi brand di berbagai kota.",
+  keywords: [
+    "agency SPG",
+    "jasa SPG",
+    "SPG Jakarta",
+    "SPG Surabaya",
+    "SPG Semarang",
+    "SPG Bali",
+    "SPB event",
+    "usher event",
+    "talent event",
+    "trace agency",
+  ],
+  alternates: {
+    canonical: "/",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
   openGraph: {
-    title: "Trace Agency — Visual Storytelling & Creative Production",
-    description: "Trace Agency menghadirkan produksi visual, branding, dan kampanye kreatif—lihat portofolio kami dan konsultasikan kebutuhanmu.",
-    url: "https://traceagency.com",
+    title: "Trace Agency | Agency SPG, SPB, Usher, MC Profesional",
+    description:
+      "Layanan talent event profesional untuk kebutuhan promosi, pameran, dan event brand Anda.",
+    url: "/",
     siteName: "Trace Agency",
     images: [
       {
-        url: "https://images.unsplash.com/photo-1542038784456-1ea8e935640e?q=80&w=1200&auto=format&fit=crop", // placeholder
+        url: "/traceagency.png",
         width: 1200,
         height: 630,
       },
     ],
     type: "website",
+    locale: "id_ID",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Trace Agency | Agency SPG, SPB, Usher, MC Profesional",
+    description:
+      "Layanan talent event profesional untuk kebutuhan promosi, pameran, dan event brand Anda.",
+    images: ["/traceagency.png"],
   },
 };
 

@@ -3,8 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { usePathname } from "next/navigation";
-
-const WA_URL = "https://wa.me/6285191641608";
+import { WHATSAPP_LINK } from "@/lib/whatsapp";
 
 export default function Hero() {
   const pathname = usePathname();
@@ -141,22 +140,22 @@ export default function Hero() {
           className="flex flex-col items-center"
         >
           <motion.div variants={itemVariants} className="inline-block mb-6 px-4 py-1.5 rounded-full border border-border text-text-secondary text-xs font-semibold tracking-[0.2em] uppercase">
-            Agency SPG & Usher
+            Agency SPG/SPB
           </motion.div>
           
           <motion.h1 
             variants={itemVariants}
             className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-foreground leading-tight tracking-tighter mb-6 font-display"
           >
-            Perkuat setiap acara Anda <br />
-            <span className="text-text-secondary">dengan talenta terbaik.</span>
+            Perkuat Talent Acara Anda <br />
+            <span className="text-text-secondary">dengan Talenta Terbaik.</span>
           </motion.h1>
           
           <motion.p 
             variants={itemVariants}
             className="text-base md:text-lg text-text-secondary leading-relaxed mb-10 max-w-2xl font-light"
           >
-            Kami menyediakan SPG, Usher, MC, dan Talent profesional untuk mensukseskan setiap event Anda.
+            Kami menyediakan SPG/SPB, Usher, MC, dan Talent profesional untuk mensukseskan setiap event Anda
           </motion.p>
           
           <motion.div variants={itemVariants} className="flex flex-row gap-4 w-full sm:w-auto justify-center">
@@ -168,7 +167,7 @@ export default function Hero() {
               Layanan Kami
             </a>
             <a
-              href={WA_URL}
+              href={WHATSAPP_LINK}
               target="_blank"
               rel="noopener noreferrer"
               className="px-6 py-4 rounded-full bg-surface text-foreground border border-border text-sm md:text-base font-semibold hover:bg-surface/80 transition-all flex items-center justify-center flex-1 sm:flex-none min-w-[140px]"

@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Mail, Phone, Instagram, Send, Loader2, CheckCircle } from "lucide-react";
+import { WHATSAPP_LINK } from "@/lib/whatsapp";
 
 export default function Kontak() {
   const [formState, setFormState] = useState("idle"); // idle, loading, success, error
 
   const FORM_ACCESS_KEY = "307d894a-b4fd-4227-8158-db348d8511df";
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setFormState("loading");
@@ -87,7 +87,7 @@ export default function Kontak() {
                 <div>
                   <h4 className="text-xs font-semibold text-text-secondary uppercase tracking-widest mb-1">WhatsApp</h4>
                   <a
-                    href="https://wa.me/6285191641608"
+                    href={WHATSAPP_LINK}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-xl font-medium text-foreground hover:text-gray-300 transition-colors underline-offset-4 hover:underline"

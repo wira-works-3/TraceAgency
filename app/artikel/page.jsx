@@ -4,6 +4,21 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { articlesData } from "@/data/articles";
 
+export const metadata = {
+  title: "Artikel Agency SPG",
+  description:
+    "Baca artikel dan insight seputar jasa SPG profesional, talent event, strategi promosi, dan tips memilih agency SPG terpercaya.",
+  alternates: {
+    canonical: "/artikel",
+  },
+  openGraph: {
+    title: "Artikel Agency SPG | Trace Agency",
+    description:
+      "Kumpulan artikel Trace Agency seputar layanan SPG, SPB, Usher, dan kebutuhan talent event profesional.",
+    url: "/artikel",
+  },
+};
+
 export default function AllArticlesPage() {
   return (
     <>

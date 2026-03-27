@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
-
-const WA_URL = "https://wa.me/6285191641608";
+import { WHATSAPP_LINK } from "@/lib/whatsapp";
 
 const services = [
   {
@@ -38,7 +37,7 @@ const services = [
   {
     id: 2,
     title: "Master of Ceremony",
-    tags: ["Acara korporat", "Konser"],
+    tags: ["Gathering", "Meeting"],
     description: "MC berpengalaman yang siap menghidupkan suasana dan mengendalikan jalannya acara. Fleksibel untuk berbagai jenis event dari formal hingga kasual.",
     bg: "bg-[#1a1a1a]",
     images: ["/MC/MC-1.jpg"]
@@ -135,7 +134,7 @@ export default function Services() {
             </h2>
           </div>
           <a
-            href={WA_URL}
+            href={WHATSAPP_LINK}
             target="_blank"
             rel="noopener noreferrer"
             className="px-6 py-3 rounded-full bg-foreground text-background text-sm font-semibold hover:bg-gray-200 transition-all inline-block text-center"
@@ -229,7 +228,7 @@ export default function Services() {
                       </p>
                       
                       <a
-                        href={WA_URL}
+                        href={WHATSAPP_LINK}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}

@@ -1,10 +1,12 @@
 "use client";
 
+import { WHATSAPP_LINK } from "@/lib/whatsapp";
+
 export default function FloatingSocialButtons() {
   return (
     <div className="fixed right-4 bottom-6 z-50 flex flex-col gap-3 pointer-events-none">
       <a
-        href="https://wa.me/6285191641608"
+        href={WHATSAPP_LINK}
         target="_blank"
         rel="noopener noreferrer"
         aria-label="WhatsApp"

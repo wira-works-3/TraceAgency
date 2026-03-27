@@ -1,18 +1,28 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function VideoShowcase() {
   const [isNarrowScreen, setIsNarrowScreen] = useState(false);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const unlockTimerRef = useRef(null);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 639px)");
+    const touchMq = window.matchMedia("(hover: none), (pointer: coarse)");
     const update = () => setIsNarrowScreen(mq.matches);
+    const updateTouch = () => setIsTouchDevice(touchMq.matches);
     update();
+    updateTouch();
     mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
+    touchMq.addEventListener("change", updateTouch);
+    return () => {
+      mq.removeEventListener("change", update);
+      touchMq.removeEventListener("change", updateTouch);
+    };
   }, []);
   const imageObjectPositions = useMemo(
     () => ({
@@ -117,6 +127,22 @@ export default function VideoShowcase() {
     );
   }, [categories]);
 
+  useEffect(() => {
+    // Preload images to reduce frame drops when users navigate quickly.
+    items.forEach((item) => {
+      const img = new Image();
+      img.src = item.src;
+    });
+  }, [items]);
+
+  useEffect(() => {
+    return () => {
+      if (unlockTimerRef.current) {
+        window.clearTimeout(unlockTimerRef.current);
+      }
+    };
+  }, []);
+
   const [activeIndex, setActiveIndex] = useState(0);
   const totalItems = items.length;
   const safeIndex = ((activeIndex % totalItems) + totalItems) % totalItems;
@@ -129,12 +155,26 @@ export default function VideoShowcase() {
 
   const activeCategoryKey = activeItem?.categoryKey ?? "spg";
 
-  const goPrev = () => setActiveIndex((current) => (current - 1 + totalItems) % totalItems);
-  const goNext = () => setActiveIndex((current) => (current + 1) % totalItems);
+  const beginNavigation = (updater) => {
+    if (isAnimating || totalItems <= 1) return;
+    setIsAnimating(true);
+    setActiveIndex(updater);
+
+    if (unlockTimerRef.current) {
+      window.clearTimeout(unlockTimerRef.current);
+    }
+    unlockTimerRef.current = window.setTimeout(() => {
+      setIsAnimating(false);
+    }, 420);
+  };
+
+  const goPrev = () => beginNavigation((current) => (current - 1 + totalItems) % totalItems);
+  const goNext = () => beginNavigation((current) => (current + 1) % totalItems);
 
   const jumpToCategory = (categoryKey) => {
+    if (isAnimating) return;
     const targetIndex = items.findIndex((item) => item.categoryKey === categoryKey);
-    if (targetIndex >= 0) setActiveIndex(targetIndex);
+    if (targetIndex >= 0) beginNavigation(() => targetIndex);
   };
 
   const sidePeek = isNarrowScreen ? "32%" : "55%";
@@ -163,10 +203,11 @@ export default function VideoShowcase() {
                 key={category.key}
                 type="button"
                 onClick={() => jumpToCategory(category.key)}
+                disabled={isAnimating}
                 className={
                   isActive
-                    ? "h-10 px-5 rounded-full bg-foreground text-background text-sm font-bold"
-                    : "h-10 px-5 rounded-full border border-border text-foreground text-sm font-semibold hover:bg-foreground hover:text-background transition-colors"
+                    ? "h-10 px-5 rounded-full bg-foreground text-background text-sm font-bold disabled:opacity-70 disabled:cursor-not-allowed"
+                    : "h-10 px-5 rounded-full border border-border text-foreground text-sm font-semibold hover:bg-foreground hover:text-background transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
                 }
               >
                 {category.label}
@@ -224,6 +265,19 @@ export default function VideoShowcase() {
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.94, y: -8 }}
                     transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
+                    drag={isTouchDevice ? "x" : false}
+                    dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={0.18}
+                    onDragEnd={(_, info) => {
+                      if (isAnimating) return;
+                      const threshold = 40;
+                      if (info.offset.x > threshold) {
+                        goPrev();
+                      } else if (info.offset.x < -threshold) {
+                        goNext();
+                      }
+                    }}
+                    whileTap={{ scale: 0.97 }}
                     className="absolute left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 w-[82%] max-w-[calc(100vw-2rem)] sm:max-w-none sm:w-[68%] md:w-[52%] aspect-[4/3] rounded-2xl sm:rounded-3xl overflow-hidden border border-border shadow-[0_35px_90px_rgba(0,0,0,0.75)]"
                     style={{ zIndex: 30 }}
                   >
@@ -252,7 +306,8 @@ export default function VideoShowcase() {
             <button
               type="button"
               onClick={goPrev}
-              className="h-12 w-12 rounded-full border border-border bg-background text-foreground hover:bg-foreground hover:text-background transition-colors flex items-center justify-center"
+              disabled={isAnimating}
+              className="h-12 w-12 rounded-full border border-border bg-background text-foreground hover:bg-foreground hover:text-background transition-colors flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
               aria-label="Sebelumnya"
             >
               <ChevronLeft size={20} />
@@ -260,7 +315,8 @@ export default function VideoShowcase() {
             <button
               type="button"
               onClick={goNext}
-              className="h-12 w-12 rounded-full border border-border bg-background text-foreground hover:bg-foreground hover:text-background transition-colors flex items-center justify-center"
+              disabled={isAnimating}
+              className="h-12 w-12 rounded-full border border-border bg-background text-foreground hover:bg-foreground hover:text-background transition-colors flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
               aria-label="Berikutnya"
             >
               <ChevronRight size={20} />

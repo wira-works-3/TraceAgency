@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowUpRight, Instagram, Mail, Phone } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { WHATSAPP_LINK } from "@/lib/whatsapp";
 
 export default function Footer() {
   const pathname = usePathname();
@@ -110,7 +111,7 @@ export default function Footer() {
                 <span className="text-base font-medium">traceagencys@gmail.com</span>
               </a>
               <a
-                href="https://wa.me/6285191641608"
+                href={WHATSAPP_LINK}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-3 text-text-secondary hover:text-foreground transition-colors group"
