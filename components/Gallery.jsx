@@ -19,6 +19,16 @@ const SCROLL_SETTINGS = {
   },
 };
 
+/**
+ * Di mobile (di bawah breakpoint lg), geser titik fokus object-cover ke bawah dalam kotak (bukan memindahkan kotak).
+ * Sesuaikan persen vertikal jika masih kurang pas per foto.
+ */
+const GALLERY_MOBILE_OBJECT_POSITION_CLASS = {
+  1: "max-lg:object-[center_0%]",
+  3: "max-lg:object-[center_0%]",
+  6: "max-lg:object-[center_0%]",
+};
+
 export default function Gallery() {
   const targetRef = useRef(null);
   const scrollerRef = useRef(null);
@@ -131,7 +141,9 @@ export default function Gallery() {
                   <img
                     src={srcMobile}
                     alt={`Galeri ${img.label}`}
-                    className="h-full w-full object-cover transition-all duration-700"
+                    className={`h-full w-full object-cover transition-all duration-700 ${
+                      GALLERY_MOBILE_OBJECT_POSITION_CLASS[img.id] ?? ""
+                    }`}
                   />
                 </picture>
               </motion.div>
