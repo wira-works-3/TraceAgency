@@ -147,8 +147,8 @@ export default function Hero() {
             variants={itemVariants}
             className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-foreground leading-tight tracking-tighter mb-6 font-display"
           >
-            Perkuat Talent Acara Anda <br />
-            <span className="text-text-secondary">dengan Talenta Terbaik.</span>
+            Perkuat Event Anda <br />
+            <span className="text-text-secondary">dengan Talent Terbaik</span>
           </motion.h1>
           
           <motion.p 

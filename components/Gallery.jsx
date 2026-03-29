@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect } from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
+import { galleryData } from "@/data/gallery";
 
 // Kontrol utama panjang scroll gallery.
 // Turunkan angka-angka ini jika ingin scroll makin pendek.
@@ -17,16 +18,6 @@ const SCROLL_SETTINGS = {
     minHeightVh: 1.05,
   },
 };
-
-const galleryImages = [
-  // { id: 1, src: "/Usher/Usher-12.jpg", label: "Usher", desc: "Handling tamu dan VIP dengan profesional" },
-  { id: 1, src: "/SPG/SPG-9.JPG", label: "SPG & SPB", desc: "Brand activation dan sales support" },
-  { id: 2, src: "/Usher/Usher-1.jpg", label: "Usher", desc: "First impression yang elegan" },
-  { id: 3, src: "/Usher/Usher-9.jpg", label: "Usher", desc: "On-ground event support" },
-  { id: 4, src: "/Usher/Usher-14.jpg", label: "Usher", desc: "Event flow yang rapi dan terarah" },
-  { id: 5, src: "/Usher/Usher-8.JPG", label: "Usher", desc: "Handling tamu dan VIP dengan profesional" },
-  { id: 6, src: "/Usher/Usher-16.jpg", label: "Usher", desc: "Event flow yang rapi dan terarah" },
-];
 
 export default function Gallery() {
   const targetRef = useRef(null);
@@ -119,7 +110,9 @@ export default function Gallery() {
           ref={scrollerRef}
           className="flex gap-16 pl-[10vw] pr-[10vw] lg:pr-[14vw] items-center w-max"
         >
-          {galleryImages.map((img) => {
+          {galleryData.map((img) => {
+            const srcDesktop = img.srcDesktop ?? img.src;
+            const srcMobile = img.srcMobile ?? img.src;
             return (
               <motion.div 
                 key={img.id}
@@ -133,11 +126,14 @@ export default function Gallery() {
                 onMouseEnter={() => setHoveredProject(img)}
                 onMouseLeave={() => setHoveredProject(null)}
               >
-                <img
-                  src={img.src}
-                  alt={`Galeri ${img.id}`}
-                  className="w-full h-full object-cover transition-all duration-700"
-                />
+                <picture className="block h-full w-full">
+                  <source media="(min-width: 1024px)" srcSet={srcDesktop} />
+                  <img
+                    src={srcMobile}
+                    alt={`Galeri ${img.label}`}
+                    className="h-full w-full object-cover transition-all duration-700"
+                  />
+                </picture>
               </motion.div>
             );
           })}

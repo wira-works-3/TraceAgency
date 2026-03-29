@@ -34,6 +34,6 @@ body {
   }
 
   .animate-marquee {
-    animation: marquee 40s linear infinite;
+    animation: marquee 85s linear infinite;
     width: max-content;
   }
