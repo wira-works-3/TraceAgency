@@ -1,8 +1,12 @@
 "use client";
 
 import { WHATSAPP_LINK } from "@/lib/whatsapp";
+import { usePathname } from "next/navigation";
 
 export default function FloatingSocialButtons() {
+  const pathname = usePathname();
+  if (pathname?.startsWith("/admin")) return null;
+
   return (
     <div className="fixed right-4 bottom-6 z-50 flex flex-col gap-3 pointer-events-none">
       <a
@@ -41,4 +45,3 @@ export default function FloatingSocialButtons() {
     </div>
   );
 }
-

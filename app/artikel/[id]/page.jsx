@@ -4,10 +4,41 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { articlesData } from "@/data/articles";
 import { WHATSAPP_LINK } from "@/lib/whatsapp";
+import { prisma } from "@/lib/prisma";
+
+function formatDateId(date) {
+  if (!date) return "";
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return "";
+  return new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", year: "numeric" }).format(d);
+}
+
+async function getArticleById(id) {
+  if (prisma.article) {
+    try {
+      const row = await prisma.article.findUnique({ where: { id } });
+      if (row) {
+        return {
+          id: row.id,
+          title: row.title,
+          excerpt: row.excerpt,
+          content: row.content ?? null,
+          date: formatDateId(row.date),
+          image: row.image,
+          category: row.category,
+          objectPosition: row.objectPosition ?? null,
+        };
+      }
+    } catch {
+      return null;
+    }
+  }
+  return articlesData.find((item) => item.id === id) ?? null;
+}
 
 export async function generateMetadata({ params }) {
   const resolvedParams = await params;
-  const article = articlesData.find((item) => item.id === resolvedParams.id);
+  const article = await getArticleById(String(resolvedParams.id));
 
   if (!article) {
     return {
@@ -41,7 +72,7 @@ export default async function ArticleDetail({ params }) {
   const resolvedParams = await params;
   
   // Mencari artikel berdasarkan ID dari URL
-  const article = articlesData.find(a => a.id === resolvedParams.id);
+  const article = await getArticleById(String(resolvedParams.id));
 
   // Jika artikel tidak ditemukan
   if (!article) {

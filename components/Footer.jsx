@@ -45,14 +45,14 @@ export default function Footer() {
               Kolaborasi bersama Trace Agency untuk mengangkat pengalaman merek Anda dan terhubung dengan audiens.
             </p>
           </div>
-          <a
+          <Link
             href="/#kontak"
             className="group flex items-center justify-center gap-2 bg-foreground text-background px-8 py-4 rounded-full font-semibold text-lg transition-transform hover:scale-105"
             onClick={(e) => handleHashNav(e, "/#kontak")}
           >
             Mari bicara
             <ArrowUpRight className="w-5 h-5 group-hover:rotate-45 transition-transform" />
-          </a>
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-12 lg:gap-8 mb-16">
@@ -85,7 +85,7 @@ export default function Footer() {
                 { label: "Kontak", href: "/#kontak" },
               ].map((item) => (
                 <li key={item.label}>
-                  <a
+                  <Link
                     href={item.href}
                     className="text-text-secondary hover:text-foreground transition-colors text-base font-medium"
                     onClick={(e) => {
@@ -94,7 +94,7 @@ export default function Footer() {
                     }}
                   >
                     {item.label}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>

@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { WHATSAPP_LINK } from "@/lib/whatsapp";
 
 export default function Hero() {
@@ -12,17 +13,71 @@ export default function Hero() {
   const opacity = useTransform(scrollY, [0, 500], [1, 0]);
   const [isDesktop, setIsDesktop] = useState(false);
 
-  const heroImages = useMemo(
+  const defaultHeroImages = useMemo(
     () => [
       "/Usher/Usher-1.jpg",
       "/SPG/SPG-6.JPG",
       "/SPG/SPG-1.JPG",
       "/SPG/SPG-3.jpg",
       "/Usher/Usher-2.JPG",
-      "/Usher/Usher-4.JPG"
+      "/Usher/Usher-4.JPG",
     ],
     []
   );
+  const [heroImages, setHeroImages] = useState(defaultHeroImages);
+  const [heroCopy, setHeroCopy] = useState({
+    badge: "Agency SPG & USHER",
+    titleLine1: "Perkuat Event Anda",
+    titleLine2: "dengan Talent Terbaik",
+    description:
+      "Kami menyediakan SPG/SPB, Usher, MC, dan Talent profesional untuk mensukseskan setiap event Anda",
+    primaryCtaLabel: "Layanan Kami",
+    secondaryCtaLabel: "Hubungi Kami",
+    clients: [
+      "Big Hersman",
+      "Armani Exchange",
+      "Pertamina",
+      "BEI / IDX",
+      "BCA",
+      "Digibank",
+      "Grab",
+      "Orangtua Group",
+      "Mayora",
+      "Teh Pucuk Harum",
+      "Pepsico",
+      "Hush Puppies",
+      "AEON Mall",
+      "Richs",
+      "Tigac",
+      "Blackjack",
+      "UPPF",
+      "Oumier",
+      "UBS Gold",
+      "CNI",
+      "ADIDAS",
+      "Moist Diane",
+      "Lalamove",
+      "Honda",
+      "Yamaha",
+      "Indofood",
+      "Dekson",
+      "CS Food",
+      "LPKN",
+      "Djarum",
+      "Mandiri",
+      "Xiaomi",
+      "Maybank",
+      "Tolak Angin",
+      "Ecova",
+      "Aqua",
+      "VinFast",
+      "GoPay",
+      "Phillips",
+      "Hikvision",
+      "Manulife",
+      "Allianz",
+    ],
+  });
 
   const imageObjectPositions = useMemo(
     () => ({
@@ -49,6 +104,75 @@ export default function Hero() {
   );
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const hasPreviewOverrideRef = useRef(false);
+
+  useEffect(() => {
+    const handler = (event) => {
+      if (event.origin !== window.location.origin) return;
+      const data = event.data;
+      if (!data || data.type !== "TA_ADMIN_PREVIEW") return;
+      const hero = data.hero;
+      if (!hero || typeof hero !== "object") return;
+
+      hasPreviewOverrideRef.current = true;
+
+      const clients = Array.isArray(hero.clients) ? hero.clients.filter(Boolean) : null;
+      const images = Array.isArray(hero.images) ? hero.images.filter(Boolean) : null;
+
+      setHeroCopy((current) => ({
+        ...current,
+        badge: hero.badge || current.badge,
+        titleLine1: hero.titleLine1 || current.titleLine1,
+        titleLine2: hero.titleLine2 || current.titleLine2,
+        description: hero.description || current.description,
+        primaryCtaLabel: hero.primaryCtaLabel || current.primaryCtaLabel,
+        secondaryCtaLabel: hero.secondaryCtaLabel || current.secondaryCtaLabel,
+        clients: clients?.length ? clients : current.clients,
+      }));
+
+      if (images?.length) {
+        setHeroImages(images);
+        setActiveImageIndex(0);
+      }
+    };
+
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/public/hero")
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (!data?.ok || !data?.hero) return;
+        if (hasPreviewOverrideRef.current) return;
+        const hero = data.hero;
+        const clients = Array.isArray(hero.clients) ? hero.clients.filter(Boolean) : null;
+        const images = Array.isArray(hero.images) ? hero.images.filter(Boolean) : null;
+
+        setHeroCopy((current) => ({
+          ...current,
+          badge: hero.badge || current.badge,
+          titleLine1: hero.titleLine1 || current.titleLine1,
+          titleLine2: hero.titleLine2 || current.titleLine2,
+          description: hero.description || current.description,
+          primaryCtaLabel: hero.primaryCtaLabel || current.primaryCtaLabel,
+          secondaryCtaLabel: hero.secondaryCtaLabel || current.secondaryCtaLabel,
+          clients: clients?.length ? clients : current.clients,
+        }));
+        if (images?.length) {
+          setHeroImages(images);
+          setActiveImageIndex(0);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     heroImages.forEach((src) => {
@@ -140,39 +264,39 @@ export default function Hero() {
           className="flex flex-col items-center"
         >
           <motion.div variants={itemVariants} className="inline-block mb-6 px-4 py-1.5 rounded-full border border-border text-text-secondary text-xs font-semibold tracking-[0.2em] uppercase">
-            Agency SPG & USHER
+            {heroCopy.badge}
           </motion.div>
           
           <motion.h1 
             variants={itemVariants}
             className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-foreground leading-tight tracking-tighter mb-6 font-display"
           >
-            Perkuat Event Anda <br />
-            <span className="text-text-secondary">dengan Talent Terbaik</span>
+            {heroCopy.titleLine1} <br />
+            <span className="text-text-secondary">{heroCopy.titleLine2}</span>
           </motion.h1>
           
           <motion.p 
             variants={itemVariants}
             className="text-base md:text-lg text-text-secondary leading-relaxed mb-10 max-w-2xl font-light"
           >
-            Kami menyediakan SPG/SPB, Usher, MC, dan Talent profesional untuk mensukseskan setiap event Anda
+            {heroCopy.description}
           </motion.p>
           
           <motion.div variants={itemVariants} className="flex flex-row gap-4 w-full sm:w-auto justify-center">
-            <a
+            <Link
               href="/#services"
               onClick={handleLayananClick}
               className="px-6 py-4 rounded-full bg-foreground text-background text-sm md:text-base font-semibold hover:bg-gray-200 transition-all flex items-center justify-center flex-1 sm:flex-none min-w-[140px]"
             >
-              Layanan Kami
-            </a>
+              {heroCopy.primaryCtaLabel}
+            </Link>
             <a
               href={WHATSAPP_LINK}
               target="_blank"
               rel="noopener noreferrer"
               className="px-6 py-4 rounded-full bg-surface text-foreground border border-border text-sm md:text-base font-semibold hover:bg-surface/80 transition-all flex items-center justify-center flex-1 sm:flex-none min-w-[140px]"
             >
-              Hubungi Kami
+              {heroCopy.secondaryCtaLabel}
             </a>
           </motion.div>
         </motion.div>
@@ -184,10 +308,10 @@ export default function Hero() {
         <div className="flex w-full whitespace-nowrap overflow-hidden">
           <div className="animate-marquee flex gap-12 items-center px-6">
             {/* Repeated logos for infinite scroll effect */}
-            {['Big Hersman', 'Armani Exchange', 'Pertamina', 'BEI / IDX', 'BCA', 'Digibank', 'Grab', 'Orangtua Group', 'Mayora', 'Teh Pucuk Harum', 'Pepsico', 'Hush Puppies', 'AEON Mall', 'Richs', 'Tigac', 'Blackjack', 'UPPF', 'Oumier', 'UBS Gold', 'CNI', 'ADIDAS', 'Moist Diane', 'Lalamove', 'Honda', 'Yamaha', 'Indofood', 'Dekson', 'CS Food', 'LPKN', 'Djarum', 'Mandiri', 'Xiaomi', 'Maybank', 'Tolak Angin', 'Ecova', 'Aqua', 'VinFast', 'GoPay', 'Phillips', 'Hikvision', 'Manulife', 'Allianz'].map((logo, i) => (
+            {heroCopy.clients.map((logo, i) => (
               <span key={i} className="text-xl font-bold text-text-secondary mix-blend-plus-lighter">{logo}</span>
             ))}
-            {['Big Hersman', 'Armani Exchange', 'Pertamina', 'BEI / IDX', 'BCA', 'Digibank', 'Grab', 'Orangtua Group', 'Mayora', 'Teh Pucuk Harum', 'Pepsico', 'Hush Puppies', 'AEON Mall', 'Richs', 'Tigac', 'Blackjack', 'UPPF', 'Oumier', 'UBS Gold', 'CNI', 'ADIDAS', 'Moist Diane', 'Lalamove', 'Honda', 'Yamaha', 'Indofood', 'Dekson', 'CS Food', 'LPKN', 'Djarum', 'Mandiri', 'Xiaomi', 'Maybank', 'Tolak Angin', 'Ecova', 'Aqua', 'VinFast', 'GoPay', 'Phillips', 'Hikvision', 'Manulife', 'Allianz'].map((logo, i) => (
+            {heroCopy.clients.map((logo, i) => (
               <span key={`dup-${i}`} className="text-xl font-bold text-text-secondary mix-blend-plus-lighter">{logo}</span>
             ))}
           </div>

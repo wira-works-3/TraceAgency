@@ -146,13 +146,13 @@ export default function Header() {
                   {link.name}
                 </a>
               ))}
-              <a
+              <Link
                 href="/#kontak"
                 onClick={(e) => handleSmoothScroll(e, "/#kontak")}
                 className="mt-8 px-8 py-4 rounded-full bg-foreground text-background text-center font-semibold hover:bg-gray-200 inline-block w-fit cursor-pointer"
               >
                 Konsultasi Sekarang
-              </a>
+              </Link>
             </div>
           </motion.div>
         )}

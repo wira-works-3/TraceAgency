@@ -1,8 +1,11 @@
+"use client";
+
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { articlesData } from "@/data/articles";
+import { useEffect, useMemo, useState } from "react";
 
 export const metadata = {
   title: "Artikel Agency SPG",
@@ -20,6 +23,35 @@ export const metadata = {
 };
 
 export default function AllArticlesPage() {
+  const [articles, setArticles] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/public/articles")
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (!data?.ok || !Array.isArray(data.articles)) return;
+        setArticles(data.articles);
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const mergedArticles = useMemo(() => {
+    const remote = Array.isArray(articles) ? articles : [];
+    if (remote.length) {
+      return remote.map((a) => ({
+        ...a,
+        date: a.dateLabel ?? a.date ?? "",
+      }));
+    }
+    return articlesData;
+  }, [articles]);
+
   return (
     <>
       <Header />
@@ -43,7 +75,7 @@ export default function AllArticlesPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10">
-            {articlesData.map((article) => (
+            {mergedArticles.map((article) => (
               <Link
                 href={`/artikel/${article.id}`}
                 key={article.id}
@@ -65,7 +97,7 @@ export default function AllArticlesPage() {
                 </div>
 
                 <div className="text-text-secondary text-xs mb-3 font-medium uppercase tracking-widest">
-                  <span>{article.date}</span>
+                  <span>{article.dateLabel ?? article.date}</span>
                 </div>
 
                 <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-4 group-hover:text-gray-300 transition-colors leading-tight line-clamp-3">

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { WHATSAPP_LINK } from "@/lib/whatsapp";
 
-const services = [
+const defaultServices = [
   {
     id: 0,
     title: "SPG & SPB",
@@ -56,26 +56,119 @@ export default function Services() {
   const [activeService, setActiveService] = useState(0);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isDesktop, setIsDesktop] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const [hasMeasuredViewport, setHasMeasuredViewport] = useState(false);
+  const hasPreviewOverride = useRef(false);
+  const [sectionCopy, setSectionCopy] = useState({
+    pillLabel: "Solusi Kami",
+    headingLine1: "Mengubah acara",
+    headingLine2: "menjadi pengalaman berkesan",
+    ctaLabel: "Konsultasi Sekarang",
+    detailCtaLabel: "Detail Layanan",
+  });
+  const [servicesList, setServicesList] = useState(defaultServices);
 
   useEffect(() => {
-    setMounted(true);
     const handleResize = () => {
       setIsDesktop(window.innerWidth >= 1024);
+      setHasMeasuredViewport(true);
     };
-    
-    // Set initial value
-    handleResize();
-    
+
     window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    const t = window.setTimeout(handleResize, 0);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener("resize", handleResize);
+    };
   }, []);
 
   useEffect(() => {
-    setActiveImageIndex(0);
-  }, [activeService]);
+    let cancelled = false;
+    fetch("/api/public/services")
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (hasPreviewOverride.current) return;
+        if (!data?.ok || !data?.services) return;
+        const next = data.services;
 
-  const activeImages = services[activeService]?.images ?? [];
+        setSectionCopy((current) => ({
+          ...current,
+          pillLabel: String(next.pillLabel ?? current.pillLabel),
+          headingLine1: String(next.headingLine1 ?? current.headingLine1),
+          headingLine2: String(next.headingLine2 ?? current.headingLine2),
+          ctaLabel: String(next.ctaLabel ?? current.ctaLabel),
+          detailCtaLabel: String(next.detailCtaLabel ?? current.detailCtaLabel),
+        }));
+
+        if (Array.isArray(next.services)) {
+          const normalized = next.services.map((svc, idx) => {
+            const fallback = defaultServices[idx] ?? defaultServices[0];
+            return {
+              id: fallback?.id ?? idx,
+              bg: fallback?.bg ?? "bg-[#111111]",
+              title: String(svc?.title ?? ""),
+              tags: Array.isArray(svc?.tags) ? svc.tags.map((t) => String(t)).filter(Boolean) : [],
+              description: String(svc?.description ?? ""),
+              images: Array.isArray(svc?.images) ? svc.images.map((i) => String(i)).filter(Boolean) : [],
+            };
+          });
+          setServicesList(normalized.length ? normalized : defaultServices);
+          setActiveService(0);
+          setActiveImageIndex(0);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const handler = (event) => {
+      if (event.origin !== window.location.origin) return;
+      const data = event.data;
+      if (!data || data.type !== "TA_ADMIN_PREVIEW") return;
+      const next = data.services;
+      if (!next || typeof next !== "object") return;
+      hasPreviewOverride.current = true;
+
+      setSectionCopy((current) => ({
+        ...current,
+        pillLabel: String(next.pillLabel ?? current.pillLabel),
+        headingLine1: String(next.headingLine1 ?? current.headingLine1),
+        headingLine2: String(next.headingLine2 ?? current.headingLine2),
+        ctaLabel: String(next.ctaLabel ?? current.ctaLabel),
+        detailCtaLabel: String(next.detailCtaLabel ?? current.detailCtaLabel),
+      }));
+
+      if (Array.isArray(next.services)) {
+        const normalized = next.services.map((svc, idx) => {
+          const fallback = defaultServices[idx] ?? defaultServices[0];
+          return {
+            id: fallback?.id ?? idx,
+            bg: fallback?.bg ?? "bg-[#111111]",
+            title: String(svc?.title ?? ""),
+            tags: Array.isArray(svc?.tags) ? svc.tags.map((t) => String(t)).filter(Boolean) : [],
+            description: String(svc?.description ?? ""),
+            images: Array.isArray(svc?.images) ? svc.images.map((i) => String(i)).filter(Boolean) : [],
+          };
+        });
+
+        setServicesList(normalized.length ? normalized : defaultServices);
+        setActiveService((current) => {
+          const nextIndex = Math.min(current, (normalized.length || defaultServices.length) - 1);
+          return Math.max(0, nextIndex);
+        });
+        setActiveImageIndex(0);
+      }
+    };
+
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, []);
+
+  const activeImages = servicesList[activeService]?.images ?? [];
   const canNavigateImages = activeImages.length > 1;
 
   const activeImageSrc =
@@ -126,11 +219,11 @@ export default function Services() {
         <div className="flex flex-col md:flex-row md:justify-between md:items-end mb-16 gap-6">
           <div>
             <span className="inline-block px-4 py-1.5 rounded-full border border-border text-text-secondary text-xs font-semibold tracking-[0.2em] uppercase mb-6">
-              Solusi Kami
+              {sectionCopy.pillLabel}
             </span>
             <h2 className="text-4xl md:text-5xl font-bold text-text-secondary leading-tight font-display">
-              Mengubah acara <br />
-              <span className="text-foreground">menjadi pengalaman berkesan</span>
+              {sectionCopy.headingLine1} <br />
+              <span className="text-foreground">{sectionCopy.headingLine2}</span>
             </h2>
           </div>
           <a
@@ -139,29 +232,32 @@ export default function Services() {
             rel="noopener noreferrer"
             className="px-6 py-3 rounded-full bg-foreground text-background text-sm font-semibold hover:bg-gray-200 transition-all inline-block text-center"
           >
-            Konsultasi Sekarang
+            {sectionCopy.ctaLabel}
           </a>
         </div>
 
         {/* Accordion / Expandable Cards Layout */}
         <div className="flex flex-col lg:flex-row gap-4 h-auto lg:h-[600px]">
-          {services.map((service, index) => {
+          {servicesList.map((service, index) => {
             const isActive = activeService === index;
             
             return (
               <motion.div
                 key={service.id}
                 layout
-                onClick={() => setActiveService(index)}
+                onClick={() => {
+                  setActiveService(index);
+                  setActiveImageIndex(0);
+                }}
                 className={`${service.bg} border border-border rounded-[2rem] overflow-hidden cursor-pointer flex flex-col lg:flex-row relative group`}
                 animate={{
-                  flex: isActive ? (mounted && isDesktop ? 6 : 1) : 0.5,
+                  flex: isActive ? (hasMeasuredViewport && isDesktop ? 6 : 1) : 0.5,
                   opacity: 1
                 }}
                 transition={{ duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
                 style={{ 
-                  minWidth: isActive ? "auto" : (mounted && isDesktop ? "80px" : "auto"),
-                  minHeight: isActive ? "auto" : (mounted && isDesktop ? "auto" : "80px")
+                  minWidth: isActive ? "auto" : (hasMeasuredViewport && isDesktop ? "80px" : "auto"),
+                  minHeight: isActive ? "auto" : (hasMeasuredViewport && isDesktop ? "auto" : "80px")
                 }}
               >
                 {/* 
@@ -234,7 +330,7 @@ export default function Services() {
                         onClick={(e) => e.stopPropagation()}
                         className="mt-auto w-fit px-8 py-4 rounded-full bg-foreground text-background text-sm font-bold hover:bg-gray-200 transition-colors flex items-center justify-center gap-3 group/btn"
                       >
-                        Detail Layanan <ArrowRight size={18} className="group-hover/btn:translate-x-1 transition-transform" />
+                        {sectionCopy.detailCtaLabel} <ArrowRight size={18} className="group-hover/btn:translate-x-1 transition-transform" />
                       </a>
                     </div>
                   </motion.div>

@@ -4,11 +4,59 @@ import { useMemo, useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
+const DEFAULT_CATEGORIES = [
+  {
+    key: "spg",
+    label: "SPG",
+    images: [
+      "/SPG/SPG-1.JPG",
+      "/SPG/SPG-2.JPG",
+      "/SPG/SPG-3.jpg",
+      "/SPG/SPG-4.JPG",
+      "/SPG/SPG-5.JPG",
+      "/SPG/SPG-6.JPG",
+      "/SPG/SPG-7.JPG",
+      "/SPG/SPG-8.JPG",
+    ],
+  },
+  {
+    key: "usher",
+    label: "USHER",
+    images: [
+      "/Usher/Usher-1.jpg",
+      "/Usher/Usher-2.JPG",
+      "/Usher/Usher-3.JPG",
+      "/Usher/Usher-4.JPG",
+      "/Usher/Usher-5.JPG",
+      "/Usher/Usher-6.JPG",
+      "/Usher/Usher-7.jpg",
+      "/Usher/Usher-8.JPG",
+      "/Usher/Usher-9.jpg",
+      "/Usher/Usher-10.jpg",
+      "/Usher/Usher-11.jpg",
+      "/Usher/Usher-12.jpg",
+      "/Usher/Usher-13.JPG",
+      "/Usher/Usher-14.jpg",
+      "/Usher/Usher-15.jpg",
+      "/Usher/Usher-16.jpg",
+    ],
+  },
+  { key: "mc", label: "MC", images: ["/MC/MC-1.jpg"] },
+  { key: "talent", label: "TALENT", images: ["/Talent/Talent-1.JPG"] },
+];
+
 export default function VideoShowcase() {
   const [isNarrowScreen, setIsNarrowScreen] = useState(false);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const unlockTimerRef = useRef(null);
+  const [sectionCopy, setSectionCopy] = useState({
+    pillLabel: "Galeri",
+    heading: "Diari visual kami",
+    description: "Lihat dokumentasi event melalui koleksi foto dan highlight dari tim kami.",
+  });
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 639px)");
@@ -64,57 +112,44 @@ export default function VideoShowcase() {
     return desktopObjectPositions[src] ?? imageObjectPositions[src] ?? "50% 50%";
   };
 
-  const categories = useMemo(
-    () => [
-      {
-        key: "spg",
-        label: "SPG",
-        images: [
-          "/SPG/SPG-1.JPG",
-          "/SPG/SPG-2.JPG",
-          "/SPG/SPG-3.jpg",
-          "/SPG/SPG-4.JPG",
-          "/SPG/SPG-5.JPG",
-          "/SPG/SPG-6.JPG",
-          "/SPG/SPG-7.JPG",
-          "/SPG/SPG-8.JPG"
-        ]
-      },
-      {
-        key: "usher",
-        label: "USHER",
-        images: [
-          "/Usher/Usher-1.jpg",
-          "/Usher/Usher-2.JPG",
-          "/Usher/Usher-3.JPG",
-          "/Usher/Usher-4.JPG",
-          "/Usher/Usher-5.JPG",
-          "/Usher/Usher-6.JPG",
-          "/Usher/Usher-7.jpg",
-          "/Usher/Usher-8.JPG",
-          "/Usher/Usher-9.jpg",
-          "/Usher/Usher-10.jpg",
-          "/Usher/Usher-11.jpg",
-          "/Usher/Usher-12.jpg",
-          "/Usher/Usher-13.JPG",
-          "/Usher/Usher-14.jpg",
-          "/Usher/Usher-15.jpg",
-          "/Usher/Usher-16.jpg"
-        ]
-      },
-      {
-        key: "mc",
-        label: "MC",
-        images: ["/MC/MC-1.jpg"]
-      },
-      {
-        key: "talent",
-        label: "TALENT",
-        images: ["/Talent/Talent-1.JPG"]
+  useEffect(() => {
+    const handler = (event) => {
+      if (event.origin !== window.location.origin) return;
+      const data = event.data;
+      if (!data || data.type !== "TA_ADMIN_PREVIEW") return;
+      const next = data.videoShowcase;
+      if (!next || typeof next !== "object") return;
+
+      setSectionCopy((current) => ({
+        ...current,
+        pillLabel: String(next.pillLabel ?? current.pillLabel),
+        heading: String(next.heading ?? current.heading),
+        description: String(next.description ?? current.description),
+      }));
+
+      const nextCatsRaw = next.categories;
+      if (Array.isArray(nextCatsRaw)) {
+        const normalized = nextCatsRaw
+          .map((c, idx) => {
+            const fallback = DEFAULT_CATEGORIES[idx] ?? DEFAULT_CATEGORIES[0];
+            const key = String(c?.key ?? fallback.key);
+            const label = String(c?.label ?? fallback.label);
+            const images = Array.isArray(c?.images) ? c.images.map((s) => String(s)).filter(Boolean) : [];
+            return { key, label, images };
+          })
+          .filter((c) => c.key);
+
+        const hasImages = normalized.some((c) => Array.isArray(c.images) && c.images.length);
+        if (normalized.length && hasImages) {
+          setCategories(normalized);
+          setActiveIndex(0);
+        }
       }
-    ],
-    []
-  );
+    };
+
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, []);
 
   const items = useMemo(() => {
     return categories.flatMap((category) =>
@@ -143,17 +178,17 @@ export default function VideoShowcase() {
     };
   }, []);
 
-  const [activeIndex, setActiveIndex] = useState(0);
   const totalItems = items.length;
-  const safeIndex = ((activeIndex % totalItems) + totalItems) % totalItems;
-  const prevIndex = (safeIndex - 1 + totalItems) % totalItems;
-  const nextIndex = (safeIndex + 1) % totalItems;
+  const safeTotal = totalItems || 1;
+  const safeIndex = ((activeIndex % safeTotal) + safeTotal) % safeTotal;
+  const prevIndex = (safeIndex - 1 + safeTotal) % safeTotal;
+  const nextIndex = (safeIndex + 1) % safeTotal;
 
-  const activeItem = items[safeIndex];
-  const prevItem = items[prevIndex];
-  const nextItem = items[nextIndex];
+  const activeItem = totalItems ? items[safeIndex] : null;
+  const prevItem = totalItems ? items[prevIndex] : null;
+  const nextItem = totalItems ? items[nextIndex] : null;
 
-  const activeCategoryKey = activeItem?.categoryKey ?? "spg";
+  const activeCategoryKey = activeItem?.categoryKey ?? categories[0]?.key ?? "spg";
 
   const beginNavigation = (updater) => {
     if (isAnimating || totalItems <= 1) return;
@@ -186,12 +221,12 @@ export default function VideoShowcase() {
     <section className="py-28 bg-background overflow-x-hidden">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-[1400px]">
         <div className="text-center mb-10">
-          <div className="text-xs font-semibold tracking-[0.3em] uppercase text-text-secondary">Galeri</div>
+          <div className="text-xs font-semibold tracking-[0.3em] uppercase text-text-secondary">{sectionCopy.pillLabel}</div>
           <h2 className="mt-4 text-4xl md:text-5xl font-black text-foreground leading-tight tracking-tight uppercase">
-            Diari visual kami
+            {sectionCopy.heading}
           </h2>
           <p className="mt-4 text-sm md:text-base text-text-secondary max-w-2xl mx-auto">
-            Lihat dokumentasi event melalui koleksi foto dan highlight dari tim kami.
+            {sectionCopy.description}
           </p>
         </div>
 
@@ -217,10 +252,12 @@ export default function VideoShowcase() {
         </div>
 
         <div className="relative w-full max-w-6xl mx-auto overflow-hidden sm:overflow-visible">
-          <div className="relative h-[300px] sm:h-[380px] md:h-[460px]">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="relative w-full max-w-full h-full overflow-hidden sm:overflow-visible">
-                <AnimatePresence initial={false}>
+          {totalItems ? (
+            <>
+              <div className="relative h-[300px] sm:h-[380px] md:h-[460px]">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="relative w-full max-w-full h-full overflow-hidden sm:overflow-visible">
+                    <AnimatePresence initial={false}>
                   <motion.div
                     key={`prev-${prevItem?.src}`}
                     initial={{ opacity: 0, x: `-${sidePeek}`, scale: sideScale }}
@@ -297,31 +334,33 @@ export default function VideoShowcase() {
                       </div>
                     </div>
                   </motion.div>
-                </AnimatePresence>
+                    </AnimatePresence>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          <div className="mt-10 flex items-center justify-center gap-4">
-            <button
-              type="button"
-              onClick={goPrev}
-              disabled={isAnimating}
-              className="h-12 w-12 rounded-full border border-border bg-background text-foreground hover:bg-foreground hover:text-background transition-colors flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
-              aria-label="Sebelumnya"
-            >
-              <ChevronLeft size={20} />
-            </button>
-            <button
-              type="button"
-              onClick={goNext}
-              disabled={isAnimating}
-              className="h-12 w-12 rounded-full border border-border bg-background text-foreground hover:bg-foreground hover:text-background transition-colors flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
-              aria-label="Berikutnya"
-            >
-              <ChevronRight size={20} />
-            </button>
-          </div>
+              <div className="mt-10 flex items-center justify-center gap-4">
+                <button
+                  type="button"
+                  onClick={goPrev}
+                  disabled={isAnimating}
+                  className="h-12 w-12 rounded-full border border-border bg-background text-foreground hover:bg-foreground hover:text-background transition-colors flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
+                  aria-label="Sebelumnya"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <button
+                  type="button"
+                  onClick={goNext}
+                  disabled={isAnimating}
+                  className="h-12 w-12 rounded-full border border-border bg-background text-foreground hover:bg-foreground hover:text-background transition-colors flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
+                  aria-label="Berikutnya"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </div>
+            </>
+          ) : null}
         </div>
       </div>
     </section>

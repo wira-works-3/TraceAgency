@@ -4,8 +4,43 @@ import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { featuredArticle, sidebarArticles } from "@/data/articles";
+import { useEffect, useMemo, useState } from "react";
 
 export default function Artikel() {
+  const [articles, setArticles] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/public/articles")
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (!data?.ok || !Array.isArray(data.articles)) return;
+        setArticles(data.articles);
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const derived = useMemo(() => {
+    if (Array.isArray(articles) && articles.length) {
+      const list = articles.map((a) => ({ ...a, date: a.dateLabel ?? a.date ?? "" }));
+      return {
+        featured: list[0],
+        sidebar: list.slice(1, 4),
+      };
+    }
+    return { featured: featuredArticle, sidebar: sidebarArticles };
+  }, [articles]);
+
+  const featured = derived.featured;
+  const sidebar = derived.sidebar;
+
+  if (!featured) return null;
+
   return (
     <section id="artikel" className="py-32 bg-background border-t border-border/50 overflow-x-hidden">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">
@@ -29,7 +64,7 @@ export default function Artikel() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12">
           <Link
-            href={`/artikel/${featuredArticle.id}`}
+            href={`/artikel/${featured.id}`}
             className="lg:col-span-7 group cursor-pointer block min-w-0"
           >
             <motion.div
@@ -39,30 +74,30 @@ export default function Artikel() {
             >
               <div className="relative aspect-[4/3] sm:aspect-auto sm:h-[400px] md:h-[500px] rounded-3xl overflow-hidden mb-8 bg-surface">
                 <img
-                  src={featuredArticle.image}
-                  alt={featuredArticle.title}
+                  src={featured.image}
+                  alt={featured.title}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                  style={{ objectPosition: featuredArticle.objectPosition ?? "50% 30%" }}
+                  style={{ objectPosition: featured.objectPosition ?? "50% 30%" }}
                   loading="lazy"
                 />
                 <div className="absolute top-6 left-6 bg-background/80 backdrop-blur-md text-foreground border border-border px-4 py-2 rounded-full text-xs font-bold tracking-widest uppercase">
-                  {featuredArticle.category}
+                  {featured.category}
                 </div>
               </div>
               <div className="flex items-center gap-2 text-text-secondary text-sm mb-4 font-medium uppercase tracking-widest">
-                <span>{featuredArticle.date}</span>
+                <span>{featured.dateLabel ?? featured.date}</span>
               </div>
               <h3 className="text-3xl md:text-4xl font-bold text-foreground mb-4 group-hover:text-gray-300 transition-colors leading-tight">
-                {featuredArticle.title}
+                {featured.title}
               </h3>
               <p className="text-text-secondary leading-relaxed mb-8 text-lg">
-                {featuredArticle.excerpt}
+                {featured.excerpt}
               </p>
             </motion.div>
           </Link>
 
           <div className="lg:col-span-5 flex flex-col gap-8 min-w-0">
-            {sidebarArticles.map((article, index) => (
+            {sidebar.map((article, index) => (
               <Link href={`/artikel/${article.id}`} key={article.id} className="block min-w-0">
                 <motion.div
                   initial={{ opacity: 0, x: 30 }}
@@ -82,7 +117,7 @@ export default function Artikel() {
                   </div>
                   <div className="flex flex-col justify-center min-w-0 flex-1">
                     <div className="text-text-secondary text-xs mb-3 font-medium uppercase tracking-widest">
-                      <span>{article.date}</span>
+                      <span>{article.dateLabel ?? article.date}</span>
                     </div>
                     <h4 className="text-xl font-bold text-foreground mb-3 leading-snug group-hover:text-gray-300 transition-colors line-clamp-3">
                       {article.title}
