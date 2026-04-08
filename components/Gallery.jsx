@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect, useLayoutEffect, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { galleryData } from "@/data/gallery";
 
@@ -36,6 +36,7 @@ function clamp(n, min, max) {
 export default function Gallery() {
   const targetRef = useRef(null);
   const scrollerRef = useRef(null);
+  const hasPreviewOverrideRef = useRef(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [hoveredProject, setHoveredProject] = useState(null);
   const [maxTranslateX, setMaxTranslateX] = useState(0);
@@ -66,6 +67,54 @@ export default function Gallery() {
     return () => window.removeEventListener("mousemove", updateMousePosition);
   }, []);
 
+  const applyRemoteGallery = useCallback((next) => {
+    if (!next || typeof next !== "object") return;
+    setGalleryHeader((current) => ({
+      ...current,
+      sideLabel: String(next.sideLabel ?? current.sideLabel),
+      headingLine1: String(next.headingLine1 ?? current.headingLine1),
+      headingLine2: String(next.headingLine2 ?? current.headingLine2),
+      items: Number.isFinite(Number(next.items)) ? Number(next.items) : current.items,
+    }));
+
+    if (Array.isArray(next.itemsData)) {
+      const normalized = next.itemsData.map((it, idx) => ({
+        id: Number(it?.id ?? idx + 1),
+        src: String(it?.src ?? ""),
+        srcDesktop: it?.srcDesktop ? String(it.srcDesktop) : undefined,
+        srcMobile: it?.srcMobile ? String(it.srcMobile) : undefined,
+        label: String(it?.label ?? ""),
+        desc: String(it?.desc ?? ""),
+      }));
+      setItemsData(normalized.length ? normalized : galleryData);
+    }
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const t = window.setTimeout(() => {
+      fetch("/api/public/gallery", { cache: "no-store", signal: controller.signal })
+        .then((r) => r.json())
+        .then((data) => {
+          if (!data?.ok || !data.gallery) return;
+          if (hasPreviewOverrideRef.current) return;
+          applyRemoteGallery({
+            sideLabel: data.gallery.sideLabel,
+            headingLine1: data.gallery.headingLine1,
+            headingLine2: data.gallery.headingLine2,
+            items: data.gallery.items,
+            itemsData: Array.isArray(data.gallery.itemsData) ? data.gallery.itemsData : [],
+          });
+        })
+        .catch(() => {});
+    }, 0);
+
+    return () => {
+      window.clearTimeout(t);
+      controller.abort();
+    };
+  }, [applyRemoteGallery]);
+
   useEffect(() => {
     const handler = (event) => {
       if (event.origin !== window.location.origin) return;
@@ -73,89 +122,75 @@ export default function Gallery() {
       if (!data || data.type !== "TA_ADMIN_PREVIEW") return;
       const next = data.gallery;
       if (!next || typeof next !== "object") return;
-
-      setGalleryHeader((current) => ({
-        ...current,
-        sideLabel: String(next.sideLabel ?? current.sideLabel),
-        headingLine1: String(next.headingLine1 ?? current.headingLine1),
-        headingLine2: String(next.headingLine2 ?? current.headingLine2),
-        items: Number.isFinite(Number(next.items)) ? Number(next.items) : current.items,
-      }));
-
-      if (Array.isArray(next.itemsData)) {
-        const normalized = next.itemsData.map((it, idx) => ({
-          id: Number(it?.id ?? idx + 1),
-          src: String(it?.src ?? ""),
-          srcDesktop: it?.srcDesktop ? String(it.srcDesktop) : undefined,
-          srcMobile: it?.srcMobile ? String(it.srcMobile) : undefined,
-          label: String(it?.label ?? ""),
-          desc: String(it?.desc ?? ""),
-        }));
-        setItemsData(normalized.length ? normalized : galleryData);
-      }
+      hasPreviewOverrideRef.current = true;
+      applyRemoteGallery(next);
     };
 
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, []);
+  }, [applyRemoteGallery]);
+
+  useEffect(() => {
+    const ch = typeof window !== "undefined" ? new BroadcastChannel("ta_admin") : null;
+    if (!ch) return;
+    const onMessage = (event) => {
+      const data = event?.data;
+      if (!data || data.type !== "gallery_saved") return;
+      if (hasPreviewOverrideRef.current) return;
+      fetch("/api/public/gallery", { cache: "no-store" })
+        .then((r) => r.json())
+        .then((payload) => {
+          if (!payload?.ok || !payload.gallery) return;
+          applyRemoteGallery({
+            sideLabel: payload.gallery.sideLabel,
+            headingLine1: payload.gallery.headingLine1,
+            headingLine2: payload.gallery.headingLine2,
+            items: payload.gallery.items,
+            itemsData: Array.isArray(payload.gallery.itemsData) ? payload.gallery.itemsData : [],
+          });
+        })
+        .catch(() => {});
+    };
+    ch.addEventListener("message", onMessage);
+    return () => {
+      ch.removeEventListener("message", onMessage);
+      ch.close();
+    };
+  }, [applyRemoteGallery]);
 
   const displayedItems = itemsData.slice(0, clamp(Number(galleryHeader.items || 0), 0, itemsData.length));
 
-  const updateLayoutMetrics = useCallback(() => {
-    setIsDesktop(window.innerWidth >= 1024);
+  useEffect(() => {
+    const updateLayoutMetrics = () => {
+      setIsDesktop(window.innerWidth >= 1024);
 
-    const viewportWidth = targetRef.current?.clientWidth ?? window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const scrollerEl = scrollerRef.current;
-    const fullWidth =
-      scrollerEl?.scrollWidth ||
-      scrollerEl?.getBoundingClientRect?.().width ||
-      0;
-    const isLg = window.innerWidth >= 1024;
-    const settings = isLg ? SCROLL_SETTINGS.desktop : SCROLL_SETTINGS.mobile;
+      const viewportWidth = targetRef.current?.clientWidth ?? window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const fullWidth = scrollerRef.current?.scrollWidth ?? 0;
+      const isLg = window.innerWidth >= 1024;
+      const settings = isLg ? SCROLL_SETTINGS.desktop : SCROLL_SETTINGS.mobile;
 
-    const nextMaxTranslateX = Math.max(0, fullWidth - viewportWidth + settings.endPadding);
-    setMaxTranslateX(nextMaxTranslateX);
+      const nextMaxTranslateX = Math.max(
+        0,
+        fullWidth - viewportWidth + settings.endPadding
+      );
+      setMaxTranslateX(nextMaxTranslateX);
 
-    if (nextMaxTranslateX < 2) {
-      setScrollAreaHeight(viewportHeight);
-      return;
-    }
-
-    const minHeight = viewportHeight * settings.minHeightVh;
-    const nextScrollAreaHeight = Math.max(
-      minHeight,
-      viewportHeight + nextMaxTranslateX * settings.scrollFactor
-    );
-    setScrollAreaHeight(nextScrollAreaHeight);
-  }, []);
-
-  useLayoutEffect(() => {
-    const targetEl = targetRef.current;
-    const scrollerEl = scrollerRef.current;
-    if (!targetEl || !scrollerEl) return;
-
-    let rafId = 0;
-    const schedule = () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(updateLayoutMetrics);
+      const minHeight = viewportHeight * settings.minHeightVh;
+      const nextScrollAreaHeight = Math.max(
+        minHeight,
+        viewportHeight + nextMaxTranslateX * settings.scrollFactor
+      );
+      setScrollAreaHeight(nextScrollAreaHeight);
     };
 
-    schedule();
-
-    const onResize = () => schedule();
-    window.addEventListener("resize", onResize);
-
-    const ro = new ResizeObserver(() => schedule());
-    ro.observe(targetEl);
-    ro.observe(scrollerEl);
-
+    const t = window.setTimeout(updateLayoutMetrics, 0);
+    window.addEventListener("resize", updateLayoutMetrics);
     return () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      ro.disconnect();
-      window.removeEventListener("resize", onResize);
+      window.clearTimeout(t);
+      window.removeEventListener("resize", updateLayoutMetrics);
     };
-  }, [displayedItems.length, updateLayoutMetrics]);
+  }, [displayedItems.length]);
 
   return (
     <section

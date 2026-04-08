@@ -1,11 +1,38 @@
-"use client";
-
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { articlesData } from "@/data/articles";
-import { useEffect, useMemo, useState } from "react";
+import { prisma } from "@/lib/prisma";
+
+function formatDateId(date) {
+  if (!date) return "";
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return "";
+  return new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", year: "numeric" }).format(d);
+}
+
+async function getArticles() {
+  if (prisma.article) {
+    try {
+      const rows = await prisma.article.findMany({ orderBy: { date: "desc" } });
+      if (rows.length) {
+        return rows.map((row) => ({
+          id: row.id,
+          title: row.title,
+          excerpt: row.excerpt,
+          dateLabel: formatDateId(row.date),
+          image: row.image,
+          category: row.category,
+          objectPosition: row.objectPosition ?? null,
+        }));
+      }
+    } catch {
+      return articlesData;
+    }
+  }
+  return articlesData;
+}
 
 export const metadata = {
   title: "Artikel Agency SPG",
@@ -22,36 +49,8 @@ export const metadata = {
   },
 };
 
-export default function AllArticlesPage() {
-  const [articles, setArticles] = useState(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/public/articles")
-      .then((r) => r.json())
-      .then((data) => {
-        if (cancelled) return;
-        if (!data?.ok || !Array.isArray(data.articles)) return;
-        setArticles(data.articles);
-      })
-      .catch(() => {});
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const mergedArticles = useMemo(() => {
-    const remote = Array.isArray(articles) ? articles : [];
-    if (remote.length) {
-      return remote.map((a) => ({
-        ...a,
-        date: a.dateLabel ?? a.date ?? "",
-      }));
-    }
-    return articlesData;
-  }, [articles]);
-
+export default async function AllArticlesPage() {
+  const mergedArticles = await getArticles();
   return (
     <>
       <Header />

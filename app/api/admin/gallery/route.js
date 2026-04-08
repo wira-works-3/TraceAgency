@@ -17,20 +17,26 @@ function isAuthorized(request) {
   return token === expected;
 }
 
+function clampInt(value, min, max) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return min;
+  return Math.min(max, Math.max(min, Math.floor(n)));
+}
+
 export async function GET(request) {
   if (!isAuthorized(request)) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!prisma.aboutContent) {
-    return NextResponse.json({ ok: true, about: null });
+  if (!prisma.galleryContent) {
+    return NextResponse.json({ ok: true, gallery: null });
   }
 
   try {
-    const about = await prisma.aboutContent.findFirst({ orderBy: { id: "asc" } });
-    return NextResponse.json({ ok: true, about });
+    const gallery = await prisma.galleryContent.findFirst({ orderBy: { id: "asc" } });
+    return NextResponse.json({ ok: true, gallery });
   } catch {
-    return NextResponse.json({ ok: true, about: null });
+    return NextResponse.json({ ok: true, gallery: null });
   }
 }
 
@@ -39,12 +45,12 @@ export async function PUT(request) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!prisma.aboutContent) {
+  if (!prisma.galleryContent) {
     return NextResponse.json(
       {
         ok: false,
         error:
-          "Prisma Client belum sinkron dengan schema. Jalankan: npx prisma generate. Setelah itu pastikan tabel AboutContent sudah ada dengan: npx prisma db push.",
+          "Prisma Client belum sinkron dengan schema. Jalankan: npx prisma generate. Setelah itu pastikan tabel GalleryContent sudah ada dengan: npx prisma db push.",
       },
       { status: 500 }
     );
@@ -57,16 +63,19 @@ export async function PUT(request) {
     return NextResponse.json({ ok: false, error: "Body tidak valid." }, { status: 400 });
   }
 
-  const description = String(body?.description ?? "");
-  const highlights = body?.highlights && typeof body.highlights === "object" ? body.highlights : null;
+  const sideLabel = String(body?.sideLabel ?? "");
+  const headingLine1 = String(body?.headingLine1 ?? "");
+  const headingLine2 = String(body?.headingLine2 ?? "");
+  const items = clampInt(body?.items, 0, 99);
+  const itemsData = Array.isArray(body?.itemsData) ? body.itemsData : null;
 
   try {
-    const about = await prisma.aboutContent.upsert({
+    const saved = await prisma.galleryContent.upsert({
       where: { id: 1 },
-      update: { description, highlights },
-      create: { id: 1, description, highlights },
+      update: { sideLabel, headingLine1, headingLine2, items, itemsData },
+      create: { id: 1, sideLabel, headingLine1, headingLine2, items, itemsData },
     });
-    return NextResponse.json({ ok: true, about });
+    return NextResponse.json({ ok: true, gallery: saved });
   } catch (e) {
     const msg = String(e?.message ?? "").toLowerCase();
     if (msg.includes("does not exist") || msg.includes("unknown table")) {
@@ -74,7 +83,7 @@ export async function PUT(request) {
         {
           ok: false,
           error:
-            "Tabel AboutContent belum ada di database. Jalankan: npx prisma db push (setelah schema.prisma berisi model AboutContent).",
+            "Tabel GalleryContent belum ada di database. Jalankan: npx prisma db push (setelah schema.prisma berisi model GalleryContent).",
         },
         { status: 500 }
       );

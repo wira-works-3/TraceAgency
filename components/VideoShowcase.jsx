@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -50,6 +50,7 @@ export default function VideoShowcase() {
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const unlockTimerRef = useRef(null);
+  const hasPreviewOverrideRef = useRef(false);
   const [sectionCopy, setSectionCopy] = useState({
     pillLabel: "Galeri",
     heading: "Diari visual kami",
@@ -57,6 +58,43 @@ export default function VideoShowcase() {
   });
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [activeIndex, setActiveIndex] = useState(0);
+
+  const applyRemoteVideoShowcase = useCallback((next) => {
+    if (!next || typeof next !== "object") return;
+    setSectionCopy((current) => ({
+      ...current,
+      pillLabel: String(next.pillLabel ?? current.pillLabel),
+      heading: String(next.heading ?? current.heading),
+      description: String(next.description ?? current.description),
+    }));
+
+    const rawCats = Array.isArray(next.categories) ? next.categories : null;
+    if (!rawCats) return;
+
+    const incoming = rawCats
+      .map((c) => ({
+        key: String(c?.key ?? ""),
+        label: String(c?.label ?? ""),
+        images: Array.isArray(c?.images) ? c.images.map((s) => String(s)).filter(Boolean) : [],
+      }))
+      .filter((c) => c.key);
+
+    if (!incoming.length) return;
+
+    const byKey = new Map(incoming.map((c) => [c.key, c]));
+    const merged = DEFAULT_CATEGORIES.map((base) => {
+      const override = byKey.get(base.key);
+      if (!override) return base;
+      return {
+        key: base.key,
+        label: override.label || base.label,
+        images: override.images.length ? override.images : base.images,
+      };
+    });
+
+    setCategories(merged);
+    setActiveIndex(0);
+  }, []);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 639px)");
@@ -119,37 +157,64 @@ export default function VideoShowcase() {
       if (!data || data.type !== "TA_ADMIN_PREVIEW") return;
       const next = data.videoShowcase;
       if (!next || typeof next !== "object") return;
-
-      setSectionCopy((current) => ({
-        ...current,
-        pillLabel: String(next.pillLabel ?? current.pillLabel),
-        heading: String(next.heading ?? current.heading),
-        description: String(next.description ?? current.description),
-      }));
-
-      const nextCatsRaw = next.categories;
-      if (Array.isArray(nextCatsRaw)) {
-        const normalized = nextCatsRaw
-          .map((c, idx) => {
-            const fallback = DEFAULT_CATEGORIES[idx] ?? DEFAULT_CATEGORIES[0];
-            const key = String(c?.key ?? fallback.key);
-            const label = String(c?.label ?? fallback.label);
-            const images = Array.isArray(c?.images) ? c.images.map((s) => String(s)).filter(Boolean) : [];
-            return { key, label, images };
-          })
-          .filter((c) => c.key);
-
-        const hasImages = normalized.some((c) => Array.isArray(c.images) && c.images.length);
-        if (normalized.length && hasImages) {
-          setCategories(normalized);
-          setActiveIndex(0);
-        }
-      }
+      hasPreviewOverrideRef.current = true;
+      applyRemoteVideoShowcase(next);
     };
 
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, []);
+  }, [applyRemoteVideoShowcase]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const t = window.setTimeout(() => {
+      fetch("/api/public/video-showcase", { cache: "no-store", signal: controller.signal })
+        .then((r) => r.json())
+        .then((data) => {
+          if (!data?.ok || !data.videoShowcase) return;
+          if (hasPreviewOverrideRef.current) return;
+          applyRemoteVideoShowcase({
+            pillLabel: data.videoShowcase.pillLabel,
+            heading: data.videoShowcase.heading,
+            description: data.videoShowcase.description,
+            categories: Array.isArray(data.videoShowcase.categories) ? data.videoShowcase.categories : [],
+          });
+        })
+        .catch(() => {});
+    }, 0);
+
+    return () => {
+      window.clearTimeout(t);
+      controller.abort();
+    };
+  }, [applyRemoteVideoShowcase]);
+
+  useEffect(() => {
+    const ch = typeof window !== "undefined" ? new BroadcastChannel("ta_admin") : null;
+    if (!ch) return;
+    const onMessage = (event) => {
+      const data = event?.data;
+      if (!data || data.type !== "video_showcase_saved") return;
+      if (hasPreviewOverrideRef.current) return;
+      fetch("/api/public/video-showcase", { cache: "no-store" })
+        .then((r) => r.json())
+        .then((payload) => {
+          if (!payload?.ok || !payload.videoShowcase) return;
+          applyRemoteVideoShowcase({
+            pillLabel: payload.videoShowcase.pillLabel,
+            heading: payload.videoShowcase.heading,
+            description: payload.videoShowcase.description,
+            categories: Array.isArray(payload.videoShowcase.categories) ? payload.videoShowcase.categories : [],
+          });
+        })
+        .catch(() => {});
+    };
+    ch.addEventListener("message", onMessage);
+    return () => {
+      ch.removeEventListener("message", onMessage);
+      ch.close();
+    };
+  }, [applyRemoteVideoShowcase]);
 
   const items = useMemo(() => {
     return categories.flatMap((category) =>

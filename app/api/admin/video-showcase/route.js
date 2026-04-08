@@ -22,15 +22,15 @@ export async function GET(request) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!prisma.aboutContent) {
-    return NextResponse.json({ ok: true, about: null });
+  if (!prisma.videoShowcaseContent) {
+    return NextResponse.json({ ok: true, videoShowcase: null });
   }
 
   try {
-    const about = await prisma.aboutContent.findFirst({ orderBy: { id: "asc" } });
-    return NextResponse.json({ ok: true, about });
+    const videoShowcase = await prisma.videoShowcaseContent.findFirst({ orderBy: { id: "asc" } });
+    return NextResponse.json({ ok: true, videoShowcase });
   } catch {
-    return NextResponse.json({ ok: true, about: null });
+    return NextResponse.json({ ok: true, videoShowcase: null });
   }
 }
 
@@ -39,12 +39,12 @@ export async function PUT(request) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!prisma.aboutContent) {
+  if (!prisma.videoShowcaseContent) {
     return NextResponse.json(
       {
         ok: false,
         error:
-          "Prisma Client belum sinkron dengan schema. Jalankan: npx prisma generate. Setelah itu pastikan tabel AboutContent sudah ada dengan: npx prisma db push.",
+          "Prisma Client belum sinkron dengan schema. Jalankan: npx prisma generate. Setelah itu pastikan tabel VideoShowcaseContent sudah ada dengan: npx prisma db push.",
       },
       { status: 500 }
     );
@@ -57,16 +57,18 @@ export async function PUT(request) {
     return NextResponse.json({ ok: false, error: "Body tidak valid." }, { status: 400 });
   }
 
+  const pillLabel = String(body?.pillLabel ?? "");
+  const heading = String(body?.heading ?? "");
   const description = String(body?.description ?? "");
-  const highlights = body?.highlights && typeof body.highlights === "object" ? body.highlights : null;
+  const categories = Array.isArray(body?.categories) ? body.categories : null;
 
   try {
-    const about = await prisma.aboutContent.upsert({
+    const saved = await prisma.videoShowcaseContent.upsert({
       where: { id: 1 },
-      update: { description, highlights },
-      create: { id: 1, description, highlights },
+      update: { pillLabel, heading, description, categories },
+      create: { id: 1, pillLabel, heading, description, categories },
     });
-    return NextResponse.json({ ok: true, about });
+    return NextResponse.json({ ok: true, videoShowcase: saved });
   } catch (e) {
     const msg = String(e?.message ?? "").toLowerCase();
     if (msg.includes("does not exist") || msg.includes("unknown table")) {
@@ -74,7 +76,7 @@ export async function PUT(request) {
         {
           ok: false,
           error:
-            "Tabel AboutContent belum ada di database. Jalankan: npx prisma db push (setelah schema.prisma berisi model AboutContent).",
+            "Tabel VideoShowcaseContent belum ada di database. Jalankan: npx prisma db push (setelah schema.prisma berisi model VideoShowcaseContent).",
         },
         { status: 500 }
       );
@@ -82,3 +84,4 @@ export async function PUT(request) {
     return NextResponse.json({ ok: false, error: "Gagal menyimpan ke database." }, { status: 500 });
   }
 }
+

@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
-import { promises as fs } from "fs";
-import path from "path";
-import crypto from "crypto";
-
-export const runtime = "nodejs";
+import fs from "node:fs/promises";
+import path from "node:path";
+import crypto from "node:crypto";
 
 const COOKIE_NAME = "ta_admin_session";
 
@@ -22,16 +20,19 @@ function isAuthorized(request) {
 }
 
 function getUploadDir() {
-  const envDir = process.env.UPLOAD_DIR;
-  if (envDir) return envDir;
+  const configured = process.env.UPLOAD_DIR ? String(process.env.UPLOAD_DIR) : "";
+  if (configured.trim()) return configured;
   return path.join(process.cwd(), "public", "uploads");
 }
 
-function safeExtensionFromName(filename) {
-  const ext = path.extname(String(filename ?? "")).toLowerCase();
-  if (!ext) return "";
-  if (!/^\.[a-z0-9]+$/i.test(ext)) return "";
-  return ext;
+function getUrlPrefix() {
+  const configured = process.env.UPLOAD_URL_PREFIX ? String(process.env.UPLOAD_URL_PREFIX) : "";
+  return configured.trim() || "/uploads";
+}
+
+function safeBasename(value) {
+  const base = path.basename(String(value ?? ""));
+  return base.replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
 export async function POST(request) {
@@ -39,30 +40,39 @@ export async function POST(request) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  let form;
+  let formData;
   try {
-    form = await request.formData();
+    formData = await request.formData();
   } catch {
     return NextResponse.json({ ok: false, error: "Form data tidak valid." }, { status: 400 });
   }
 
-  const file = form.get("file");
-  if (!file || typeof file.arrayBuffer !== "function") {
-    return NextResponse.json({ ok: false, error: "File wajib diupload." }, { status: 400 });
+  const file = formData.get("file");
+  if (!file || typeof file !== "object" || typeof file.arrayBuffer !== "function") {
+    return NextResponse.json({ ok: false, error: "File tidak ditemukan." }, { status: 400 });
+  }
+
+  const originalName = typeof file.name === "string" ? file.name : "upload";
+  const safeName = safeBasename(originalName);
+  const ext = path.extname(safeName).toLowerCase();
+  const allowedExt = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif"]);
+  if (!allowedExt.has(ext)) {
+    return NextResponse.json({ ok: false, error: "Format file tidak didukung." }, { status: 400 });
   }
 
   const uploadDir = getUploadDir();
-  await fs.mkdir(uploadDir, { recursive: true });
+  const urlPrefix = getUrlPrefix();
+  const fileName = `${crypto.randomUUID()}${ext}`;
+  const filePath = path.join(uploadDir, fileName);
 
-  const originalName = file.name ? String(file.name) : "upload";
-  const ext = safeExtensionFromName(originalName) || ".bin";
-  const filename = `${Date.now()}-${crypto.randomBytes(8).toString("hex")}${ext}`;
-  const fullPath = path.join(uploadDir, filename);
-
-  const bytes = Buffer.from(await file.arrayBuffer());
-  await fs.writeFile(fullPath, bytes);
-
-  return NextResponse.json({ ok: true, url: `/uploads/${filename}`, filename });
+  try {
+    await fs.mkdir(uploadDir, { recursive: true });
+    const bytes = Buffer.from(await file.arrayBuffer());
+    await fs.writeFile(filePath, bytes);
+    return NextResponse.json({ ok: true, url: `${urlPrefix}/${fileName}` });
+  } catch {
+    return NextResponse.json({ ok: false, error: "Gagal menyimpan file." }, { status: 500 });
+  }
 }
 
 export async function DELETE(request) {
@@ -78,21 +88,30 @@ export async function DELETE(request) {
   }
 
   const url = String(body?.url ?? "").trim();
-  const filename = String(body?.filename ?? "").trim();
-  const target = filename || url.replace(/^\/uploads\//, "");
+  if (!url) return NextResponse.json({ ok: false, error: "URL tidak valid." }, { status: 400 });
 
-  if (!target || target.includes("/") || target.includes("\\") || target.includes("..")) {
-    return NextResponse.json({ ok: false, error: "Target tidak valid." }, { status: 400 });
+  const urlPrefix = getUrlPrefix();
+  const normalizedPrefix = urlPrefix.endsWith("/") ? urlPrefix : `${urlPrefix}/`;
+  if (!url.startsWith(normalizedPrefix)) {
+    return NextResponse.json({ ok: false, error: "Path tidak valid." }, { status: 400 });
   }
+
+  const fileName = safeBasename(url.slice(normalizedPrefix.length));
+  if (!fileName) return NextResponse.json({ ok: false, error: "Path tidak valid." }, { status: 400 });
 
   const uploadDir = getUploadDir();
-  const fullPath = path.join(uploadDir, target);
-
-  try {
-    await fs.unlink(fullPath);
-  } catch {
-    return NextResponse.json({ ok: true });
+  const resolvedDir = path.resolve(uploadDir);
+  const resolvedFile = path.resolve(path.join(uploadDir, fileName));
+  if (!resolvedFile.startsWith(resolvedDir + path.sep) && resolvedFile !== resolvedDir) {
+    return NextResponse.json({ ok: false, error: "Path tidak valid." }, { status: 400 });
   }
 
-  return NextResponse.json({ ok: true });
+  try {
+    await fs.unlink(resolvedFile);
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    const msg = String(e?.code ?? "");
+    if (msg === "ENOENT") return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: false, error: "Gagal menghapus file." }, { status: 500 });
+  }
 }

@@ -90,6 +90,12 @@ export default async function ArticleDetail({ params }) {
     );
   }
 
+  const knownBlocks = ["excerpt", "intro", "servicesTitle", "services", "reasonsTitle", "reasons", "cta", "whatsappLabel"];
+  const rawOrder = Array.isArray(article.content?.order) ? article.content.order.map((k) => String(k)) : [];
+  const filtered = rawOrder.filter((k) => knownBlocks.includes(k));
+  const order = [...new Set(filtered), ...knownBlocks.filter((k) => !filtered.includes(k))];
+  const rendered = new Set();
+
   return (
     <>
       <Header />
@@ -129,52 +135,106 @@ export default async function ArticleDetail({ params }) {
 
           {/* Article Content */}
           <div className="max-w-none text-foreground text-lg leading-relaxed space-y-8">
-            <p className="text-xl md:text-2xl text-foreground font-medium leading-relaxed">
-              {article.content?.intro ?? article.excerpt}
-            </p>
+            {order.map((blockKey) => {
+              if (rendered.has(blockKey)) return null;
+              rendered.add(blockKey);
 
-            {article.content?.servicesTitle ? (
-              <div className="space-y-4">
-                <h2 className="text-2xl md:text-3xl font-bold text-foreground">
-                  {article.content.servicesTitle}
-                </h2>
-                {article.content?.services?.length ? (
-                  <ul className="list-disc pl-6 md:pl-8 space-y-2 marker:text-foreground">
-                    {article.content.services.map((service) => (
+              if (blockKey === "excerpt") {
+                const excerptText = String(article.excerpt ?? "").trim();
+                const introText = String(article.content?.intro ?? "").trim();
+                if (!excerptText) return null;
+                if (introText && introText === excerptText) return null;
+                return (
+                  <p key="excerpt" className="text-xl md:text-2xl text-foreground font-medium leading-relaxed">
+                    {excerptText}
+                  </p>
+                );
+              }
+
+              if (blockKey === "intro") {
+                const intro = String(article.content?.intro ?? "").trim();
+                if (!intro) return null;
+                return (
+                  <p key="intro" className="text-xl md:text-2xl text-foreground font-medium leading-relaxed">
+                    {intro}
+                  </p>
+                );
+              }
+
+              if (blockKey === "servicesTitle") {
+                const title = String(article.content?.servicesTitle ?? "").trim();
+                if (!title) return null;
+                return (
+                  <h2 key="servicesTitle" className="text-2xl md:text-3xl font-bold text-foreground">
+                    {title}
+                  </h2>
+                );
+              }
+
+              if (blockKey === "services") {
+                const services = Array.isArray(article.content?.services) ? article.content.services : [];
+                if (!services.length) return null;
+                return (
+                  <ul key="services" className="list-disc pl-6 md:pl-8 space-y-2 marker:text-foreground">
+                    {services.map((service) => (
                       <li key={service}>{service}</li>
                     ))}
                   </ul>
-                ) : null}
-              </div>
-            ) : null}
+                );
+              }
 
-            {article.content?.reasonsTitle ? (
-              <div className="space-y-4">
-                <h2 className="text-2xl md:text-3xl font-bold text-foreground">
-                  {article.content.reasonsTitle}
-                </h2>
-                {article.content?.reasons?.length ? (
-                  <ol className="list-decimal pl-6 md:pl-8 space-y-2 marker:text-foreground">
-                    {article.content.reasons.map((reason) => (
+              if (blockKey === "reasonsTitle") {
+                const title = String(article.content?.reasonsTitle ?? "").trim();
+                if (!title) return null;
+                return (
+                  <h2 key="reasonsTitle" className="text-2xl md:text-3xl font-bold text-foreground">
+                    {title}
+                  </h2>
+                );
+              }
+
+              if (blockKey === "reasons") {
+                const reasons = Array.isArray(article.content?.reasons) ? article.content.reasons : [];
+                if (!reasons.length) return null;
+                return (
+                  <ol key="reasons" className="list-decimal pl-6 md:pl-8 space-y-2 marker:text-foreground">
+                    {reasons.map((reason) => (
                       <li key={reason}>{reason}</li>
                     ))}
                   </ol>
-                ) : null}
-              </div>
-            ) : null}
+                );
+              }
 
-            {article.content?.cta ? (
-              <p className="text-foreground font-semibold">{article.content.cta}</p>
-            ) : null}
+              if (blockKey === "cta") {
+                const cta = String(article.content?.cta ?? "").trim();
+                if (!cta) return null;
+                return (
+                  <p key="cta" className="text-foreground font-semibold">
+                    {cta}
+                  </p>
+                );
+              }
 
-            {article.content?.whatsappLabel ? (
-              <p className="text-foreground font-semibold">
-                <span className="text-foreground font-semibold">WhatsApp: </span>
-                <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="hover:underline underline-offset-4">
-                  {article.content.whatsappLabel.replace("WhatsApp: ", "")}
-                </a>
-              </p>
-            ) : null}
+              if (blockKey === "whatsappLabel") {
+                const whatsappLabel = String(article.content?.whatsappLabel ?? "").trim();
+                if (!whatsappLabel) return null;
+                return (
+                  <p key="whatsappLabel" className="text-foreground font-semibold">
+                    <span className="text-foreground font-semibold">WhatsApp: </span>
+                    <a
+                      href={WHATSAPP_LINK}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:underline underline-offset-4"
+                    >
+                      {whatsappLabel.replace("WhatsApp: ", "")}
+                    </a>
+                  </p>
+                );
+              }
+
+              return null;
+            })}
           </div>
 
           {/* Share / Footer Article */}

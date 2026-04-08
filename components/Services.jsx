@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { WHATSAPP_LINK } from "@/lib/whatsapp";
@@ -57,7 +57,7 @@ export default function Services() {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isDesktop, setIsDesktop] = useState(false);
   const [hasMeasuredViewport, setHasMeasuredViewport] = useState(false);
-  const hasPreviewOverride = useRef(false);
+  const hasPreviewOverrideRef = useRef(false);
   const [sectionCopy, setSectionCopy] = useState({
     pillLabel: "Solusi Kami",
     headingLine1: "Mengubah acara",
@@ -66,6 +66,41 @@ export default function Services() {
     detailCtaLabel: "Detail Layanan",
   });
   const [servicesList, setServicesList] = useState(defaultServices);
+
+  const applyRemoteServices = useCallback((next) => {
+    if (!next || typeof next !== "object") return;
+    const remoteServices = Array.isArray(next.services) ? next.services : null;
+
+    setSectionCopy((current) => ({
+      ...current,
+      pillLabel: String(next.pillLabel ?? current.pillLabel),
+      headingLine1: String(next.headingLine1 ?? current.headingLine1),
+      headingLine2: String(next.headingLine2 ?? current.headingLine2),
+      ctaLabel: String(next.ctaLabel ?? current.ctaLabel),
+      detailCtaLabel: String(next.detailCtaLabel ?? current.detailCtaLabel),
+    }));
+
+    if (remoteServices) {
+      const normalized = remoteServices.map((svc, idx) => {
+        const fallback = defaultServices[idx] ?? defaultServices[0];
+        return {
+          id: fallback?.id ?? idx,
+          bg: fallback?.bg ?? "bg-[#111111]",
+          title: String(svc?.title ?? ""),
+          tags: Array.isArray(svc?.tags) ? svc.tags.map((t) => String(t)).filter(Boolean) : [],
+          description: String(svc?.description ?? ""),
+          images: Array.isArray(svc?.images) ? svc.images.map((i) => String(i)).filter(Boolean) : [],
+        };
+      });
+
+      setServicesList(normalized.length ? normalized : defaultServices);
+      setActiveService((current) => {
+        const nextIndex = Math.min(current, (normalized.length || defaultServices.length) - 1);
+        return Math.max(0, nextIndex);
+      });
+      setActiveImageIndex(0);
+    }
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -82,47 +117,30 @@ export default function Services() {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    fetch("/api/public/services")
-      .then((r) => r.json())
-      .then((data) => {
-        if (cancelled) return;
-        if (hasPreviewOverride.current) return;
-        if (!data?.ok || !data?.services) return;
-        const next = data.services;
-
-        setSectionCopy((current) => ({
-          ...current,
-          pillLabel: String(next.pillLabel ?? current.pillLabel),
-          headingLine1: String(next.headingLine1 ?? current.headingLine1),
-          headingLine2: String(next.headingLine2 ?? current.headingLine2),
-          ctaLabel: String(next.ctaLabel ?? current.ctaLabel),
-          detailCtaLabel: String(next.detailCtaLabel ?? current.detailCtaLabel),
-        }));
-
-        if (Array.isArray(next.services)) {
-          const normalized = next.services.map((svc, idx) => {
-            const fallback = defaultServices[idx] ?? defaultServices[0];
-            return {
-              id: fallback?.id ?? idx,
-              bg: fallback?.bg ?? "bg-[#111111]",
-              title: String(svc?.title ?? ""),
-              tags: Array.isArray(svc?.tags) ? svc.tags.map((t) => String(t)).filter(Boolean) : [],
-              description: String(svc?.description ?? ""),
-              images: Array.isArray(svc?.images) ? svc.images.map((i) => String(i)).filter(Boolean) : [],
-            };
+    const controller = new AbortController();
+    const t = window.setTimeout(() => {
+      fetch("/api/public/services", { cache: "no-store", signal: controller.signal })
+        .then((r) => r.json())
+        .then((data) => {
+          if (!data?.ok || !data.services) return;
+          if (hasPreviewOverrideRef.current) return;
+          applyRemoteServices({
+            pillLabel: data.services.pillLabel,
+            headingLine1: data.services.headingLine1,
+            headingLine2: data.services.headingLine2,
+            ctaLabel: data.services.ctaLabel,
+            detailCtaLabel: data.services.detailCtaLabel,
+            services: Array.isArray(data.services.services) ? data.services.services : [],
           });
-          setServicesList(normalized.length ? normalized : defaultServices);
-          setActiveService(0);
-          setActiveImageIndex(0);
-        }
-      })
-      .catch(() => {});
+        })
+        .catch(() => {});
+    }, 0);
 
     return () => {
-      cancelled = true;
+      window.clearTimeout(t);
+      controller.abort();
     };
-  }, []);
+  }, [applyRemoteServices]);
 
   useEffect(() => {
     const handler = (event) => {
@@ -131,42 +149,42 @@ export default function Services() {
       if (!data || data.type !== "TA_ADMIN_PREVIEW") return;
       const next = data.services;
       if (!next || typeof next !== "object") return;
-      hasPreviewOverride.current = true;
-
-      setSectionCopy((current) => ({
-        ...current,
-        pillLabel: String(next.pillLabel ?? current.pillLabel),
-        headingLine1: String(next.headingLine1 ?? current.headingLine1),
-        headingLine2: String(next.headingLine2 ?? current.headingLine2),
-        ctaLabel: String(next.ctaLabel ?? current.ctaLabel),
-        detailCtaLabel: String(next.detailCtaLabel ?? current.detailCtaLabel),
-      }));
-
-      if (Array.isArray(next.services)) {
-        const normalized = next.services.map((svc, idx) => {
-          const fallback = defaultServices[idx] ?? defaultServices[0];
-          return {
-            id: fallback?.id ?? idx,
-            bg: fallback?.bg ?? "bg-[#111111]",
-            title: String(svc?.title ?? ""),
-            tags: Array.isArray(svc?.tags) ? svc.tags.map((t) => String(t)).filter(Boolean) : [],
-            description: String(svc?.description ?? ""),
-            images: Array.isArray(svc?.images) ? svc.images.map((i) => String(i)).filter(Boolean) : [],
-          };
-        });
-
-        setServicesList(normalized.length ? normalized : defaultServices);
-        setActiveService((current) => {
-          const nextIndex = Math.min(current, (normalized.length || defaultServices.length) - 1);
-          return Math.max(0, nextIndex);
-        });
-        setActiveImageIndex(0);
-      }
+      hasPreviewOverrideRef.current = true;
+      applyRemoteServices(next);
     };
 
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, []);
+  }, [applyRemoteServices]);
+
+  useEffect(() => {
+    const ch = typeof window !== "undefined" ? new BroadcastChannel("ta_admin") : null;
+    if (!ch) return;
+    const onMessage = (event) => {
+      const data = event?.data;
+      if (!data || data.type !== "services_saved") return;
+      if (hasPreviewOverrideRef.current) return;
+      fetch("/api/public/services", { cache: "no-store" })
+        .then((r) => r.json())
+        .then((payload) => {
+          if (!payload?.ok || !payload.services) return;
+          applyRemoteServices({
+            pillLabel: payload.services.pillLabel,
+            headingLine1: payload.services.headingLine1,
+            headingLine2: payload.services.headingLine2,
+            ctaLabel: payload.services.ctaLabel,
+            detailCtaLabel: payload.services.detailCtaLabel,
+            services: Array.isArray(payload.services.services) ? payload.services.services : [],
+          });
+        })
+        .catch(() => {});
+    };
+    ch.addEventListener("message", onMessage);
+    return () => {
+      ch.removeEventListener("message", onMessage);
+      ch.close();
+    };
+  }, [applyRemoteServices]);
 
   const activeImages = servicesList[activeService]?.images ?? [];
   const canNavigateImages = activeImages.length > 1;

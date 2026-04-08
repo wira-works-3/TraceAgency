@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { motion, useInView, useScroll, useTransform } from "framer-motion";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -44,44 +44,22 @@ function AnimatedCounter({ from = 0, to, duration = 2, suffix = "" }) {
 
 // Komponen untuk teks yang muncul per kata saat di-scroll
 function ScrollRevealText({ text }) {
-  const words = String(text ?? "").split(/\s+/g).filter(Boolean);
-
-  // Untuk versi ini, semua kata berubah menjadi putih agar tidak selang-seling.
-  const highlightedWords = null;
-
   return (
-    <div className="flex flex-wrap gap-x-2 gap-y-1 mb-8">
-      {words.map((word, i) => {
-        // (Tidak dipakai lagi, tapi dibiarkan agar struktur tetap aman)
-        const isHighlighted = false;
-        
-        // Semua kata dibuat putih saat animasi muncul.
-        const targetColor = "#ffffff";
-
-        return (
-          <motion.span 
-            key={i} 
-            className="text-[clamp(1.5rem,3.1vw,2.75rem)] font-bold leading-[1.15] tracking-tight text-[#1a1a1a]" // Ukuran dikunci agar tetap proporsional saat zoom
-            initial={{ color: "#1a1a1a" }} // Mulai dari abu-abu yang sangat gelap (nyaris hitam)
-            whileInView={{ color: targetColor }} // Menyala ke warna target saat di-scroll
-            viewport={{ once: true, margin: "-10%" }}
-            transition={{ 
-              duration: 0.6, 
-              delay: i * 0.05, // delay bertahap per kata
-              ease: "easeOut"
-            }}
-          >
-            {word}
-          </motion.span>
-        );
-      })}
-    </div>
+    <motion.p
+      className="text-[clamp(1.5rem,3.1vw,2.75rem)] font-bold leading-[1.15] tracking-tight text-foreground mb-8 whitespace-pre-wrap break-words"
+      initial={{ opacity: 0, y: 12 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-10%" }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
+    >
+      {String(text ?? "")}
+    </motion.p>
   );
 }
 
 export default function About() {
   const pathname = usePathname();
-  const hasPreviewOverride = useRef(false);
+  const hasPreviewOverrideRef = useRef(false);
   const [aboutText, setAboutText] = useState(
     "Trace agency menyediakan talent event seperti SPG/SPB, Usher, dan MC. Tim kami sudah berpengalaman dan profesional sehingga kami siap membantu dan membuat event menjadi lebih hidup dan berkesan."
   );
@@ -96,50 +74,6 @@ export default function About() {
       { value: 98, suffix: "%", label: "Client Retention Rate" },
     ],
   });
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/public/about")
-      .then((r) => r.json())
-      .then((data) => {
-        if (cancelled) return;
-        if (hasPreviewOverride.current) return;
-        if (!data?.ok || !data?.about) return;
-        const about = data.about;
-        if (typeof about?.description === "string") {
-          setAboutText(about.description);
-        }
-        const nextHighlights = about?.highlights;
-        if (nextHighlights && typeof nextHighlights === "object") {
-          const nextItemsRaw = Array.isArray(nextHighlights.items) ? nextHighlights.items : null;
-          const nextItems = nextItemsRaw
-            ? nextItemsRaw
-                .map((item) => {
-                  const value = Number(item?.value);
-                  return {
-                    value: Number.isFinite(value) ? value : 0,
-                    suffix: String(item?.suffix ?? ""),
-                    label: String(item?.label ?? ""),
-                  };
-                })
-                .filter((item) => item.value >= 0)
-            : null;
-
-          setHighlights((current) => ({
-            ...current,
-            pillLabel: String(nextHighlights.pillLabel ?? current.pillLabel),
-            headingLine1: String(nextHighlights.headingLine1 ?? current.headingLine1),
-            headingLine2: String(nextHighlights.headingLine2 ?? current.headingLine2),
-            items: nextItems ?? current.items,
-          }));
-        }
-      })
-      .catch(() => {});
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const handleLayananClick = (e) => {
     if (pathname !== "/") return;
@@ -160,13 +94,14 @@ export default function About() {
       if (!data || data.type !== "TA_ADMIN_PREVIEW") return;
       const nextAbout = data.about;
       if (!nextAbout || typeof nextAbout !== "object") return;
-      hasPreviewOverride.current = true;
       if ("description" in nextAbout) {
+        hasPreviewOverrideRef.current = true;
         setAboutText(String(nextAbout.description ?? ""));
       }
 
       const nextHighlights = nextAbout.highlights;
       if (nextHighlights && typeof nextHighlights === "object") {
+        hasPreviewOverrideRef.current = true;
         const nextItemsRaw = Array.isArray(nextHighlights.items) ? nextHighlights.items : null;
         const nextItems = nextItemsRaw
           ? nextItemsRaw
@@ -194,6 +129,75 @@ export default function About() {
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
   }, []);
+
+  const fetchAboutFromDatabase = useCallback(
+    async (signal) => {
+      try {
+        const res = await fetch("/api/public/about", { cache: "no-store", signal });
+        const data = await res.json().catch(() => null);
+        if (!data?.ok || !data.about) return;
+        if (hasPreviewOverrideRef.current) return;
+
+        const description = String(data.about.description ?? "");
+        if (description) setAboutText(description);
+
+        const nextHighlights = data.about.highlights;
+        if (nextHighlights && typeof nextHighlights === "object") {
+          const nextItemsRaw = Array.isArray(nextHighlights.items) ? nextHighlights.items : null;
+          const nextItems = nextItemsRaw
+            ? nextItemsRaw
+                .map((item) => {
+                  const value = Number(item?.value);
+                  return {
+                    value: Number.isFinite(value) ? value : 0,
+                    suffix: String(item?.suffix ?? ""),
+                    label: String(item?.label ?? ""),
+                  };
+                })
+                .filter((item) => item.value >= 0)
+            : null;
+
+          setHighlights((current) => ({
+            ...current,
+            pillLabel: String(nextHighlights.pillLabel ?? current.pillLabel),
+            headingLine1: String(nextHighlights.headingLine1 ?? current.headingLine1),
+            headingLine2: String(nextHighlights.headingLine2 ?? current.headingLine2),
+            items: nextItems ?? current.items,
+          }));
+        }
+      } catch {
+        return;
+      }
+    },
+    [setAboutText, setHighlights]
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const t = window.setTimeout(() => {
+      fetchAboutFromDatabase(controller.signal);
+    }, 0);
+    return () => {
+      window.clearTimeout(t);
+      controller.abort();
+    };
+  }, [fetchAboutFromDatabase]);
+
+  useEffect(() => {
+    const ch = typeof window !== "undefined" ? new BroadcastChannel("ta_admin") : null;
+    if (!ch) return;
+    const onMessage = (event) => {
+      const data = event?.data;
+      if (!data || data.type !== "about_saved") return;
+      if (hasPreviewOverrideRef.current) return;
+      fetchAboutFromDatabase();
+    };
+    ch.addEventListener("message", onMessage);
+    return () => {
+      ch.removeEventListener("message", onMessage);
+      ch.close();
+    };
+  }, [fetchAboutFromDatabase]);
 
   return (
     <section id="about" className="py-32 bg-background relative overflow-hidden">

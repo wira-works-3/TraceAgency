@@ -1,7 +1,16 @@
 const bcrypt = require("bcryptjs");
 const { PrismaClient } = require("@prisma/client");
+const path = require("node:path");
 
 const prisma = new PrismaClient();
+
+function parseDateLabel(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return null;
+  return d;
+}
 
 async function main() {
   const email = (process.env.ADMIN_EMAIL ?? "Traceagencys@gmail.com").trim().toLowerCase();
@@ -18,6 +27,38 @@ async function main() {
     update: {},
     create: { email, passwordHash },
   });
+
+  const articlesPath = path.join(process.cwd(), "data", "articles.json");
+  const articlesData = require(articlesPath);
+
+  for (const article of articlesData) {
+    const id = String(article?.id ?? "").trim();
+    if (!id) continue;
+    const date = parseDateLabel(article?.date) ?? new Date();
+
+    await prisma.article.upsert({
+      where: { id },
+      update: {
+        title: String(article?.title ?? ""),
+        excerpt: String(article?.excerpt ?? ""),
+        content: article?.content ?? null,
+        date,
+        image: String(article?.image ?? ""),
+        category: String(article?.category ?? ""),
+        objectPosition: article?.objectPosition ? String(article.objectPosition) : null,
+      },
+      create: {
+        id,
+        title: String(article?.title ?? ""),
+        excerpt: String(article?.excerpt ?? ""),
+        content: article?.content ?? null,
+        date,
+        image: String(article?.image ?? ""),
+        category: String(article?.category ?? ""),
+        objectPosition: article?.objectPosition ? String(article.objectPosition) : null,
+      },
+    });
+  }
 }
 
 main()

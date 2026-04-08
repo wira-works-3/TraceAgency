@@ -196,13 +196,145 @@ export default function AdminPage() {
   const [device, setDevice] = useState("desktop");
   const [openSection, setOpenSection] = useState("hero");
   const previewFrameRef = useRef(null);
-  const [draft, setDraft] = useState(() => {
-    if (typeof window === "undefined") return defaultDraft;
+  const ARTICLE_BLOCK_KEYS = useMemo(
+    () => ["excerpt", "intro", "servicesTitle", "services", "reasonsTitle", "reasons", "cta", "whatsappLabel"],
+    []
+  );
+  const [draft, setDraft] = useState(defaultDraft);
+  const [hasLoadedLocalDraft, setHasLoadedLocalDraft] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState(null);
+  const [heroDbStatus, setHeroDbStatus] = useState({ state: "idle", message: "" });
+  const [heroUploadStatus, setHeroUploadStatus] = useState({ state: "idle", message: "" });
+  const [aboutDbStatus, setAboutDbStatus] = useState({ state: "idle", message: "" });
+  const [servicesDbStatus, setServicesDbStatus] = useState({ state: "idle", message: "" });
+  const [servicesUploadStatus, setServicesUploadStatus] = useState({ state: "idle", message: "", serviceIdx: null });
+  const [galleryDbStatus, setGalleryDbStatus] = useState({ state: "idle", message: "" });
+  const [galleryUploadStatus, setGalleryUploadStatus] = useState({ state: "idle", message: "", itemIdx: null });
+  const [videoShowcaseDbStatus, setVideoShowcaseDbStatus] = useState({ state: "idle", message: "" });
+  const [videoShowcaseUploadStatus, setVideoShowcaseUploadStatus] = useState({
+    state: "idle",
+    message: "",
+    categoryIdx: null,
+  });
+  const [articlesDbStatus, setArticlesDbStatus] = useState({ state: "idle", message: "" });
+  const [articleUploadStatus, setArticleUploadStatus] = useState({ state: "idle", message: "" });
+  const [articleDrag, setArticleDrag] = useState({ list: null, index: null });
+  const [articleBlockDragIndex, setArticleBlockDragIndex] = useState(null);
+  const [articles, setArticles] = useState([]);
+  const [articleMode, setArticleMode] = useState("create");
+  const [articleForm, setArticleForm] = useState({
+    originalId: "",
+    id: "",
+    title: "",
+    excerpt: "",
+    date: "",
+    image: "",
+    category: "",
+    objectPosition: "",
+    intro: "",
+    servicesTitle: "",
+    services: [""],
+    reasonsTitle: "",
+    reasons: [""],
+    cta: "",
+    whatsappLabel: "",
+    contentOrder: ["excerpt", "intro", "servicesTitle", "services", "reasonsTitle", "reasons", "cta", "whatsappLabel"],
+  });
+
+  const slugify = useCallback((value) => {
+    return String(value ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 80);
+  }, []);
+
+  const normalizeArticleBlockOrder = useCallback(
+    (value) => {
+      const input = Array.isArray(value) ? value.map((v) => String(v)) : [];
+      const filtered = input.filter((k) => ARTICLE_BLOCK_KEYS.includes(k));
+      const unique = Array.from(new Set(filtered));
+      const merged = [...unique, ...ARTICLE_BLOCK_KEYS.filter((k) => !unique.includes(k))];
+      return merged;
+    },
+    [ARTICLE_BLOCK_KEYS]
+  );
+
+  const setFormFromArticle = useCallback((article) => {
+    const dateInput = article?.date ? String(article.date).slice(0, 10) : "";
+    const content = article?.content && typeof article.content === "object" ? article.content : null;
+    const contentOrder = normalizeArticleBlockOrder(content?.order);
+
+    setArticleForm({
+      originalId: String(article?.id ?? ""),
+      id: String(article?.id ?? ""),
+      title: String(article?.title ?? ""),
+      excerpt: String(article?.excerpt ?? ""),
+      date: dateInput,
+      image: String(article?.image ?? ""),
+      category: String(article?.category ?? ""),
+      objectPosition: String(article?.objectPosition ?? ""),
+      intro: String(content?.intro ?? article?.excerpt ?? ""),
+      servicesTitle: String(content?.servicesTitle ?? "Layanan Kami berupa:"),
+      services: Array.isArray(content?.services) ? content.services.map((s) => String(s)) : [""],
+      reasonsTitle: String(content?.reasonsTitle ?? "Kenapa Harus Pilih Kami?"),
+      reasons: Array.isArray(content?.reasons) ? content.reasons.map((s) => String(s)) : [""],
+      cta: String(content?.cta ?? ""),
+      whatsappLabel: String(content?.whatsappLabel ?? "WhatsApp: +62 851-9164-1608"),
+      contentOrder,
+    });
+  }, [normalizeArticleBlockOrder]);
+
+  const resetArticleForm = useCallback(() => {
+    setArticleMode("create");
+    setArticleForm({
+      originalId: "",
+      id: "",
+      title: "",
+      excerpt: "",
+      date: "",
+      image: "",
+      category: "",
+      objectPosition: "",
+      intro: "",
+      servicesTitle: "",
+      services: [""],
+      reasonsTitle: "",
+      reasons: [""],
+      cta: "",
+      whatsappLabel: "",
+      contentOrder: ["excerpt", "intro", "servicesTitle", "services", "reasonsTitle", "reasons", "cta", "whatsappLabel"],
+    });
+  }, []);
+
+  const moveArrayItem = useCallback((arr, fromIndex, toIndex) => {
+    const next = Array.isArray(arr) ? [...arr] : [];
+    const from = Number(fromIndex);
+    const to = Number(toIndex);
+    if (!Number.isInteger(from) || !Number.isInteger(to)) return next;
+    if (from < 0 || to < 0 || from >= next.length || to >= next.length) return next;
+    if (from === to) return next;
+    const [item] = next.splice(from, 1);
+    next.splice(to, 0, item);
+    return next.length ? next : [""];
+  }, []);
+
+  const insertArrayItemAfter = useCallback((arr, index, value) => {
+    const next = Array.isArray(arr) ? [...arr] : [];
+    const i = Number(index);
+    if (!Number.isInteger(i) || i < -1 || i >= next.length) return [...next, value];
+    next.splice(i + 1, 0, value);
+    return next.length ? next : [""];
+  }, []);
+
+  useEffect(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (!raw) return defaultDraft;
+      if (!raw) return;
       const parsed = JSON.parse(raw);
-      if (!parsed || typeof parsed !== "object") return defaultDraft;
+      if (!parsed || typeof parsed !== "object") return;
       const mergedHero = { ...defaultDraft.hero, ...(parsed.hero ?? {}) };
       const mergedAboutHighlights = {
         ...defaultDraft.about.highlights,
@@ -241,7 +373,7 @@ export default function AdminPage() {
         ...(parsed.videoShowcase ?? {}),
         categories: normalizedVsCategories,
       };
-      return {
+      setDraft({
         ...defaultDraft,
         ...parsed,
         hero: mergedHero,
@@ -249,93 +381,12 @@ export default function AdminPage() {
         servicesSection: mergedServicesSection,
         gallery: mergedGallery,
         videoShowcase: mergedVideoShowcase,
-      };
+      });
     } catch {
-      return defaultDraft;
+      return;
+    } finally {
+      setHasLoadedLocalDraft(true);
     }
-  });
-  const [isDirty, setIsDirty] = useState(false);
-  const [lastSavedAt, setLastSavedAt] = useState(null);
-  const [heroDbStatus, setHeroDbStatus] = useState({ state: "idle", message: "" });
-  const [aboutDbStatus, setAboutDbStatus] = useState({ state: "idle", message: "" });
-  const [servicesDbStatus, setServicesDbStatus] = useState({ state: "idle", message: "" });
-  const [articlesDbStatus, setArticlesDbStatus] = useState({ state: "idle", message: "" });
-  const [articles, setArticles] = useState([]);
-  const [articleMode, setArticleMode] = useState("create");
-  const [articleForm, setArticleForm] = useState({
-    id: "",
-    title: "",
-    excerpt: "",
-    date: "",
-    image: "",
-    category: "",
-    objectPosition: "",
-    contentJson: "",
-  });
-
-  useEffect(() => {
-    const handler = (e) => {
-      if (e.ctrlKey) return;
-      if (!e.defaultPrevented) return;
-      window.scrollBy({ top: e.deltaY, left: 0, behavior: "auto" });
-    };
-
-    window.addEventListener("wheel", handler, { passive: false });
-    return () => window.removeEventListener("wheel", handler);
-  }, []);
-
-  const slugify = useCallback((value) => {
-    return String(value ?? "")
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 80);
-  }, []);
-
-  const setFormFromArticle = useCallback((article) => {
-    const dateInput = article?.date ? String(article.date).slice(0, 10) : "";
-    const contentJson =
-      article?.content && typeof article.content === "object"
-        ? JSON.stringify(article.content, null, 2)
-        : JSON.stringify(
-            {
-              intro: article?.excerpt ?? "",
-              servicesTitle: "",
-              services: [],
-              reasonsTitle: "",
-              reasons: [],
-              cta: "",
-              whatsappLabel: "",
-            },
-            null,
-            2
-          );
-
-    setArticleForm({
-      id: String(article?.id ?? ""),
-      title: String(article?.title ?? ""),
-      excerpt: String(article?.excerpt ?? ""),
-      date: dateInput,
-      image: String(article?.image ?? ""),
-      category: String(article?.category ?? ""),
-      objectPosition: String(article?.objectPosition ?? ""),
-      contentJson,
-    });
-  }, []);
-
-  const resetArticleForm = useCallback(() => {
-    setArticleMode("create");
-    setArticleForm({
-      id: "",
-      title: "",
-      excerpt: "",
-      date: "",
-      image: "",
-      category: "",
-      objectPosition: "",
-      contentJson: "",
-    });
   }, []);
 
   const loadArticles = useCallback(async () => {
@@ -355,12 +406,196 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
+    if (!hasLoadedLocalDraft) return;
     loadArticles();
-  }, [loadArticles]);
+  }, [hasLoadedLocalDraft, loadArticles]);
+
+  const loadAboutFromDatabase = useCallback(async () => {
+    setAboutDbStatus({ state: "loading", message: "" });
+    try {
+      const res = await fetch("/api/admin/about");
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
+        setAboutDbStatus({ state: "error", message: data?.error ?? "Gagal memuat." });
+        return;
+      }
+
+      const about = data.about;
+      if (!about) {
+        setAboutDbStatus({ state: "idle", message: "" });
+        return;
+      }
+
+      setDraft((current) => {
+        const next = structuredClone(current);
+        next.about = {
+          ...next.about,
+          description: String(about.description ?? next.about?.description ?? ""),
+          highlights: about.highlights && typeof about.highlights === "object" ? about.highlights : next.about?.highlights,
+        };
+        return next;
+      });
+      setAboutDbStatus({ state: "idle", message: "" });
+    } catch {
+      setAboutDbStatus({ state: "error", message: "Gagal memuat." });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedLocalDraft) return;
+    loadAboutFromDatabase();
+  }, [hasLoadedLocalDraft, loadAboutFromDatabase]);
+
+  const loadServicesFromDatabase = useCallback(async () => {
+    setServicesDbStatus({ state: "loading", message: "" });
+    try {
+      const res = await fetch("/api/admin/services");
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
+        setServicesDbStatus({ state: "error", message: data?.error ?? "Gagal memuat." });
+        return;
+      }
+      const saved = data.services;
+      if (!saved) {
+        setServicesDbStatus({ state: "idle", message: "" });
+        return;
+      }
+      setDraft((current) => {
+        const next = structuredClone(current);
+        const incoming = Array.isArray(saved.services) ? saved.services : [];
+        next.servicesSection = {
+          ...next.servicesSection,
+          pillLabel: String(saved.pillLabel ?? next.servicesSection?.pillLabel ?? ""),
+          headingLine1: String(saved.headingLine1 ?? next.servicesSection?.headingLine1 ?? ""),
+          headingLine2: String(saved.headingLine2 ?? next.servicesSection?.headingLine2 ?? ""),
+          ctaLabel: String(saved.ctaLabel ?? next.servicesSection?.ctaLabel ?? ""),
+          detailCtaLabel: String(saved.detailCtaLabel ?? next.servicesSection?.detailCtaLabel ?? ""),
+          services: incoming.length
+            ? incoming.map((svc, idx) => ({
+                ...(next.servicesSection?.services?.[idx] ?? defaultDraft.servicesSection.services[idx] ?? {}),
+                title: String(svc?.title ?? ""),
+                tags: Array.isArray(svc?.tags) ? svc.tags.map((t) => String(t)).filter(Boolean) : [],
+                description: String(svc?.description ?? ""),
+                images: Array.isArray(svc?.images) ? svc.images.map((i) => String(i)).filter(Boolean) : [],
+              }))
+            : next.servicesSection.services,
+        };
+        return next;
+      });
+      setServicesDbStatus({ state: "idle", message: "" });
+    } catch {
+      setServicesDbStatus({ state: "error", message: "Gagal memuat." });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedLocalDraft) return;
+    loadServicesFromDatabase();
+  }, [hasLoadedLocalDraft, loadServicesFromDatabase]);
+
+  const loadGalleryFromDatabase = useCallback(async () => {
+    setGalleryDbStatus({ state: "loading", message: "" });
+    try {
+      const res = await fetch("/api/admin/gallery");
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
+        setGalleryDbStatus({ state: "error", message: data?.error ?? "Gagal memuat." });
+        return;
+      }
+      const saved = data.gallery;
+      if (!saved) {
+        setGalleryDbStatus({ state: "idle", message: "" });
+        return;
+      }
+
+      setDraft((current) => {
+        const next = structuredClone(current);
+        const itemsData = Array.isArray(saved.itemsData) ? saved.itemsData : [];
+        next.gallery = {
+          ...next.gallery,
+          sideLabel: String(saved.sideLabel ?? next.gallery?.sideLabel ?? ""),
+          headingLine1: String(saved.headingLine1 ?? next.gallery?.headingLine1 ?? ""),
+          headingLine2: String(saved.headingLine2 ?? next.gallery?.headingLine2 ?? ""),
+          items: Number.isFinite(Number(saved.items)) ? Number(saved.items) : next.gallery?.items ?? 0,
+          itemsData: itemsData.length ? itemsData : next.gallery?.itemsData,
+        };
+        return next;
+      });
+      setGalleryDbStatus({ state: "idle", message: "" });
+    } catch {
+      setGalleryDbStatus({ state: "error", message: "Gagal memuat." });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedLocalDraft) return;
+    loadGalleryFromDatabase();
+  }, [hasLoadedLocalDraft, loadGalleryFromDatabase]);
+
+  const loadVideoShowcaseFromDatabase = useCallback(async () => {
+    setVideoShowcaseDbStatus({ state: "loading", message: "" });
+    try {
+      const res = await fetch("/api/admin/video-showcase");
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
+        setVideoShowcaseDbStatus({ state: "error", message: data?.error ?? "Gagal memuat." });
+        return;
+      }
+      const saved = data.videoShowcase;
+      if (!saved) {
+        setVideoShowcaseDbStatus({ state: "idle", message: "" });
+        return;
+      }
+
+      setDraft((current) => {
+        const next = structuredClone(current);
+        const savedCats = Array.isArray(saved.categories) ? saved.categories : [];
+        const savedByKey = new Map(
+          savedCats
+            .map((c) => ({
+              key: String(c?.key ?? ""),
+              label: String(c?.label ?? ""),
+              images: Array.isArray(c?.images) ? c.images.map((s) => String(s)).filter(Boolean) : [],
+            }))
+            .filter((c) => c.key)
+            .map((c) => [c.key, c])
+        );
+
+        const currentCats = Array.isArray(next.videoShowcase?.categories) ? next.videoShowcase.categories : [];
+        next.videoShowcase = {
+          ...next.videoShowcase,
+          pillLabel: String(saved.pillLabel ?? next.videoShowcase?.pillLabel ?? ""),
+          heading: String(saved.heading ?? next.videoShowcase?.heading ?? ""),
+          description: String(saved.description ?? next.videoShowcase?.description ?? ""),
+          categories: currentCats.map((c) => {
+            const key = String(c?.key ?? "");
+            const override = savedByKey.get(key);
+            if (!override) return c;
+            return {
+              ...c,
+              label: override.label || String(c?.label ?? ""),
+              images: override.images,
+            };
+          }),
+        };
+        return next;
+      });
+
+      setVideoShowcaseDbStatus({ state: "idle", message: "" });
+    } catch {
+      setVideoShowcaseDbStatus({ state: "error", message: "Gagal memuat." });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedLocalDraft) return;
+    loadVideoShowcaseFromDatabase();
+  }, [hasLoadedLocalDraft, loadVideoShowcaseFromDatabase]);
 
   const saveArticle = useCallback(async () => {
     setArticlesDbStatus({ state: "saving", message: "" });
 
+    const originalId = String(articleForm.originalId ?? "").trim();
     const id = String(articleForm.id ?? "").trim();
     const title = String(articleForm.title ?? "").trim();
     const excerpt = String(articleForm.excerpt ?? "").trim();
@@ -369,16 +604,24 @@ export default function AdminPage() {
     const objectPosition = String(articleForm.objectPosition ?? "").trim();
     const dateInput = String(articleForm.date ?? "").trim();
 
-    let content = null;
-    const contentRaw = String(articleForm.contentJson ?? "").trim();
-    if (contentRaw) {
-      try {
-        content = JSON.parse(contentRaw);
-      } catch {
-        setArticlesDbStatus({ state: "error", message: "Konten JSON tidak valid." });
-        return;
-      }
-    }
+    const contentServices = Array.isArray(articleForm.services)
+      ? articleForm.services.map((s) => String(s).trim()).filter(Boolean)
+      : [];
+    const contentReasons = Array.isArray(articleForm.reasons)
+      ? articleForm.reasons.map((s) => String(s).trim()).filter(Boolean)
+      : [];
+    const order = normalizeArticleBlockOrder(articleForm.contentOrder);
+    const contentObj = {
+      intro: String(articleForm.intro ?? ""),
+      servicesTitle: String(articleForm.servicesTitle ?? ""),
+      services: contentServices,
+      reasonsTitle: String(articleForm.reasonsTitle ?? ""),
+      reasons: contentReasons,
+      cta: String(articleForm.cta ?? ""),
+      whatsappLabel: String(articleForm.whatsappLabel ?? ""),
+      order,
+    };
+    const content = contentObj;
 
     if (!id || !title || !excerpt || !image || !category) {
       setArticlesDbStatus({ state: "error", message: "Field wajib: id, title, excerpt, image, category." });
@@ -398,28 +641,57 @@ export default function AdminPage() {
 
     try {
       const isCreate = articleMode === "create";
-      const url = isCreate ? "/api/admin/articles" : `/api/admin/articles/${encodeURIComponent(id)}`;
-      const method = isCreate ? "POST" : "PUT";
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json().catch(() => null);
-      if (!res.ok || !data?.ok) {
-        setArticlesDbStatus({ state: "error", message: data?.error ?? "Gagal menyimpan artikel." });
-        return;
+      const isRename = !isCreate && originalId && originalId !== id;
+
+      if (isRename) {
+        const createRes = await fetch("/api/admin/articles", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const createData = await createRes.json().catch(() => null);
+        if (!createRes.ok || !createData?.ok) {
+          setArticlesDbStatus({ state: "error", message: createData?.error ?? "Gagal menyimpan artikel." });
+          return;
+        }
+
+        const delRes = await fetch(`/api/admin/articles/${encodeURIComponent(originalId)}`, { method: "DELETE" });
+        const delData = await delRes.json().catch(() => null);
+        if (!delRes.ok || !delData?.ok) {
+          setArticlesDbStatus({
+            state: "error",
+            message: delData?.error ?? "Artikel tersimpan, tapi gagal hapus ID lama.",
+          });
+          await loadArticles();
+          return;
+        }
+        setArticleForm((c) => ({ ...c, originalId: id }));
+      } else {
+        const url = isCreate ? "/api/admin/articles" : `/api/admin/articles/${encodeURIComponent(id)}`;
+        const method = isCreate ? "POST" : "PUT";
+        const res = await fetch(url, {
+          method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.ok) {
+          setArticlesDbStatus({ state: "error", message: data?.error ?? "Gagal menyimpan artikel." });
+          return;
+        }
+        if (!isCreate) {
+          setArticleForm((c) => ({ ...c, originalId: id }));
+        }
       }
+
       await loadArticles();
       setArticlesDbStatus({ state: "saved", message: "Artikel tersimpan." });
       window.setTimeout(() => setArticlesDbStatus({ state: "idle", message: "" }), 2000);
-      if (isCreate) {
-        resetArticleForm();
-      }
+      if (isCreate) resetArticleForm();
     } catch {
       setArticlesDbStatus({ state: "error", message: "Gagal menyimpan artikel." });
     }
-  }, [articleForm, articleMode, loadArticles, resetArticleForm]);
+  }, [articleForm, articleMode, loadArticles, normalizeArticleBlockOrder, resetArticleForm]);
 
   const deleteArticle = useCallback(
     async (id) => {
@@ -461,6 +733,7 @@ export default function AdminPage() {
   }, [draft, isDirty]);
 
   useEffect(() => {
+    if (!hasLoadedLocalDraft) return;
     let cancelled = false;
     fetch("/api/admin/hero")
       .then((r) => r.json())
@@ -489,70 +762,7 @@ export default function AdminPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/admin/about")
-      .then((r) => r.json())
-      .then((data) => {
-        if (cancelled) return;
-        if (!data?.ok) return;
-        if (!data?.about) return;
-        const about = data.about;
-        setDraft((current) => ({
-          ...current,
-          about: {
-            ...current.about,
-            description: typeof about.description === "string" ? about.description : current.about.description,
-            highlights:
-              about.highlights && typeof about.highlights === "object"
-                ? {
-                    ...current.about.highlights,
-                    ...about.highlights,
-                    items: Array.isArray(about.highlights.items)
-                      ? about.highlights.items
-                      : current.about.highlights.items,
-                  }
-                : current.about.highlights,
-          },
-        }));
-      })
-      .catch(() => {});
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/admin/services")
-      .then((r) => r.json())
-      .then((data) => {
-        if (cancelled) return;
-        if (!data?.ok) return;
-        if (!data?.services) return;
-        const services = data.services;
-        setDraft((current) => ({
-          ...current,
-          servicesSection: {
-            ...current.servicesSection,
-            pillLabel: services.pillLabel ?? current.servicesSection.pillLabel,
-            headingLine1: services.headingLine1 ?? current.servicesSection.headingLine1,
-            headingLine2: services.headingLine2 ?? current.servicesSection.headingLine2,
-            ctaLabel: services.ctaLabel ?? current.servicesSection.ctaLabel,
-            detailCtaLabel: services.detailCtaLabel ?? current.servicesSection.detailCtaLabel,
-            services: Array.isArray(services.services) ? services.services : current.servicesSection.services,
-          },
-        }));
-      })
-      .catch(() => {});
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  }, [hasLoadedLocalDraft]);
 
   const heroPreviewPayload = useMemo(() => {
     return {
@@ -706,120 +916,401 @@ export default function AdminPage() {
     setIsDirty(true);
   };
 
-  const uploadHeroImages = useCallback(
-    async (files) => {
-      const list = Array.from(files ?? []);
-      if (!list.length) return;
+  const setHeroImages = (updater) => {
+    setDraft((current) => {
+      const next = structuredClone(current);
+      const currentImages = Array.isArray(next.hero.images) ? next.hero.images : splitLines(next.hero.images);
+      next.hero.images = updater(currentImages);
+      return next;
+    });
+    setIsDirty(true);
+  };
 
-      for (const file of list) {
-        try {
-          const form = new FormData();
-          form.append("file", file);
-          const res = await fetch("/api/admin/uploads", { method: "POST", body: form });
-          const data = await res.json().catch(() => null);
-          if (!res.ok || !data?.ok || !data?.url) continue;
+  const isUploadUrl = (value) => {
+    const url = String(value ?? "").trim();
+    return url === "/uploads" || url.startsWith("/uploads/");
+  };
 
-          const url = String(data.url);
-          setDraft((current) => {
-            const next = structuredClone(current);
-            const currentImages = Array.isArray(next.hero.images) ? next.hero.images : splitLines(next.hero.images);
-            next.hero.images = [...currentImages, url];
-            return next;
-          });
-          setIsDirty(true);
-        } catch {
+  const uploadHeroFiles = async (files) => {
+    const list = Array.from(files ?? []);
+    if (!list.length) return;
+
+    setHeroUploadStatus({ state: "uploading", message: "" });
+    const nextUrls = [];
+
+    for (const file of list) {
+      const form = new FormData();
+      form.append("file", file);
+      try {
+        const res = await fetch("/api/admin/uploads", { method: "POST", body: form });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.ok || !data?.url) {
+          setHeroUploadStatus({ state: "error", message: data?.error ?? "Gagal upload gambar." });
           continue;
         }
+        nextUrls.push(String(data.url));
+      } catch {
+        setHeroUploadStatus({ state: "error", message: "Gagal upload gambar." });
       }
-    },
-    [setDraft, setIsDirty]
-  );
+    }
 
-  const removeHeroImage = useCallback(
-    async (url) => {
-      setDraft((current) => {
-        const next = structuredClone(current);
-        const currentImages = Array.isArray(next.hero.images) ? next.hero.images : splitLines(next.hero.images);
-        next.hero.images = currentImages.filter((s) => s !== url);
-        return next;
+    if (nextUrls.length) {
+      setHeroImages((current) => Array.from(new Set([...current, ...nextUrls])).filter(Boolean));
+      setHeroUploadStatus({ state: "saved", message: "Gambar ditambahkan." });
+      window.setTimeout(() => setHeroUploadStatus({ state: "idle", message: "" }), 1500);
+    } else {
+      setHeroUploadStatus((current) => (current.state === "error" ? current : { state: "idle", message: "" }));
+    }
+  };
+
+  const deleteHeroImage = async (url) => {
+    const target = String(url ?? "").trim();
+    if (!target) return;
+    if (!isUploadUrl(target)) {
+      setHeroImages((current) => current.filter((u) => u !== target));
+      setHeroUploadStatus({ state: "saved", message: "Gambar dihapus." });
+      window.setTimeout(() => setHeroUploadStatus({ state: "idle", message: "" }), 1500);
+      return;
+    }
+    setHeroUploadStatus({ state: "deleting", message: "" });
+    try {
+      const res = await fetch("/api/admin/uploads", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: target }),
       });
-      setIsDirty(true);
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
+        setHeroUploadStatus({ state: "error", message: data?.error ?? "Gagal menghapus gambar." });
+        return;
+      }
+      setHeroImages((current) => current.filter((u) => u !== target));
+      setHeroUploadStatus({ state: "saved", message: "Gambar dihapus." });
+      window.setTimeout(() => setHeroUploadStatus({ state: "idle", message: "" }), 1500);
+    } catch {
+      setHeroUploadStatus({ state: "error", message: "Gagal menghapus gambar." });
+    }
+  };
 
-      if (!String(url).startsWith("/uploads/")) return;
+  const setServiceImages = (serviceIdx, updater) => {
+    setDraft((current) => {
+      const next = structuredClone(current);
+      const services = Array.isArray(next.servicesSection?.services)
+        ? next.servicesSection.services
+        : defaultDraft.servicesSection.services;
+      const resolved = services.map((svc) => ({
+        ...svc,
+        tags: Array.isArray(svc?.tags) ? svc.tags : splitLines(svc?.tags),
+        images: Array.isArray(svc?.images) ? svc.images : splitLines(svc?.images),
+      }));
+      const target = resolved[serviceIdx];
+      if (!target) return next;
+      target.images = updater(Array.isArray(target.images) ? target.images : []);
+      next.servicesSection.services = resolved;
+      return next;
+    });
+    setIsDirty(true);
+  };
+
+  const uploadServiceFiles = async (serviceIdx, files) => {
+    const list = Array.from(files ?? []);
+    if (!list.length) return;
+
+    setServicesUploadStatus({ state: "uploading", message: "", serviceIdx });
+    const nextUrls = [];
+
+    for (const file of list) {
+      const form = new FormData();
+      form.append("file", file);
       try {
+        const res = await fetch("/api/admin/uploads", { method: "POST", body: form });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.ok || !data?.url) {
+          setServicesUploadStatus({ state: "error", message: data?.error ?? "Gagal upload gambar.", serviceIdx });
+          continue;
+        }
+        nextUrls.push(String(data.url));
+      } catch {
+        setServicesUploadStatus({ state: "error", message: "Gagal upload gambar.", serviceIdx });
+      }
+    }
+
+    if (nextUrls.length) {
+      setServiceImages(serviceIdx, (current) => Array.from(new Set([...current, ...nextUrls])).filter(Boolean));
+      setServicesUploadStatus({ state: "saved", message: "Gambar ditambahkan.", serviceIdx });
+      window.setTimeout(() => setServicesUploadStatus({ state: "idle", message: "", serviceIdx: null }), 1500);
+    } else {
+      setServicesUploadStatus((current) =>
+        current.state === "error" ? current : { state: "idle", message: "", serviceIdx: null }
+      );
+    }
+  };
+
+  const deleteServiceImage = async (serviceIdx, url) => {
+    const target = String(url ?? "").trim();
+    if (!target) return;
+    if (!isUploadUrl(target)) {
+      setServiceImages(serviceIdx, (current) => current.filter((u) => u !== target));
+      setServicesUploadStatus({ state: "saved", message: "Gambar dihapus.", serviceIdx });
+      window.setTimeout(() => setServicesUploadStatus({ state: "idle", message: "", serviceIdx: null }), 1500);
+      return;
+    }
+
+    setServicesUploadStatus({ state: "deleting", message: "", serviceIdx });
+    try {
+      const res = await fetch("/api/admin/uploads", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: target }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
+        setServicesUploadStatus({ state: "error", message: data?.error ?? "Gagal menghapus gambar.", serviceIdx });
+        return;
+      }
+      setServiceImages(serviceIdx, (current) => current.filter((u) => u !== target));
+      setServicesUploadStatus({ state: "saved", message: "Gambar dihapus.", serviceIdx });
+      window.setTimeout(() => setServicesUploadStatus({ state: "idle", message: "", serviceIdx: null }), 1500);
+    } catch {
+      setServicesUploadStatus({ state: "error", message: "Gagal menghapus gambar.", serviceIdx });
+    }
+  };
+
+  const setGalleryItemSrc = (itemIdx, src) => {
+    updateDraft(["gallery", "itemsData", itemIdx, "src"], src);
+  };
+
+  const uploadGalleryItemFile = async (itemIdx, files) => {
+    const list = Array.from(files ?? []);
+    const file = list[0];
+    if (!file) return;
+
+    const currentSrc = String(draft.gallery?.itemsData?.[itemIdx]?.src ?? "").trim();
+    setGalleryUploadStatus({ state: "uploading", message: "", itemIdx });
+
+    try {
+      if (currentSrc && isUploadUrl(currentSrc)) {
         await fetch("/api/admin/uploads", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url }),
-        });
-      } catch {
+          body: JSON.stringify({ url: currentSrc }),
+        }).catch(() => {});
+      }
+
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/admin/uploads", { method: "POST", body: form });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok || !data?.url) {
+        setGalleryUploadStatus({ state: "error", message: data?.error ?? "Gagal upload gambar.", itemIdx });
         return;
       }
-    },
-    [setDraft, setIsDirty]
-  );
+      setGalleryItemSrc(itemIdx, String(data.url));
+      setGalleryUploadStatus({ state: "saved", message: "Gambar tersimpan.", itemIdx });
+      window.setTimeout(() => setGalleryUploadStatus({ state: "idle", message: "", itemIdx: null }), 1500);
+    } catch {
+      setGalleryUploadStatus({ state: "error", message: "Gagal upload gambar.", itemIdx });
+    }
+  };
 
-  const uploadServiceImages = useCallback(
-    async (serviceIndex, files) => {
-      const list = Array.from(files ?? []);
-      if (!list.length) return;
+  const deleteGalleryItemImage = async (itemIdx) => {
+    const currentSrc = String(draft.gallery?.itemsData?.[itemIdx]?.src ?? "").trim();
+    if (!currentSrc) return;
 
-      for (const file of list) {
-        try {
-          const form = new FormData();
-          form.append("file", file);
-          const res = await fetch("/api/admin/uploads", { method: "POST", body: form });
-          const data = await res.json().catch(() => null);
-          if (!res.ok || !data?.ok || !data?.url) continue;
+    if (!isUploadUrl(currentSrc)) {
+      setGalleryItemSrc(itemIdx, "");
+      setGalleryUploadStatus({ state: "saved", message: "Gambar dihapus.", itemIdx });
+      window.setTimeout(() => setGalleryUploadStatus({ state: "idle", message: "", itemIdx: null }), 1500);
+      return;
+    }
 
-          const url = String(data.url);
-          setDraft((current) => {
-            const next = structuredClone(current);
-            const services = Array.isArray(next.servicesSection?.services) ? next.servicesSection.services : [];
-            const svc = services[serviceIndex];
-            if (!svc) return next;
-            const currentImages = Array.isArray(svc.images) ? svc.images : splitLines(svc.images);
-            svc.images = [...currentImages, url];
-            return next;
+    setGalleryUploadStatus({ state: "deleting", message: "", itemIdx });
+    try {
+      const res = await fetch("/api/admin/uploads", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: currentSrc }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
+        setGalleryUploadStatus({ state: "error", message: data?.error ?? "Gagal menghapus gambar.", itemIdx });
+        return;
+      }
+      setGalleryItemSrc(itemIdx, "");
+      setGalleryUploadStatus({ state: "saved", message: "Gambar dihapus.", itemIdx });
+      window.setTimeout(() => setGalleryUploadStatus({ state: "idle", message: "", itemIdx: null }), 1500);
+    } catch {
+      setGalleryUploadStatus({ state: "error", message: "Gagal menghapus gambar.", itemIdx });
+    }
+  };
+
+  const setVideoShowcaseCategoryImages = (categoryIdx, updater) => {
+    setDraft((current) => {
+      const next = structuredClone(current);
+      const categories = Array.isArray(next.videoShowcase?.categories) ? next.videoShowcase.categories : [];
+      const resolved = categories.map((cat) => ({
+        ...cat,
+        images: Array.isArray(cat?.images) ? cat.images : splitLines(cat?.images),
+      }));
+      const target = resolved[categoryIdx];
+      if (!target) return next;
+      target.images = updater(Array.isArray(target.images) ? target.images : []);
+      next.videoShowcase.categories = resolved;
+      return next;
+    });
+    setIsDirty(true);
+  };
+
+  const uploadVideoShowcaseFiles = async (categoryIdx, files) => {
+    const list = Array.from(files ?? []);
+    if (!list.length) return;
+
+    setVideoShowcaseUploadStatus({ state: "uploading", message: "", categoryIdx });
+    const nextUrls = [];
+
+    for (const file of list) {
+      const form = new FormData();
+      form.append("file", file);
+      try {
+        const res = await fetch("/api/admin/uploads", { method: "POST", body: form });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.ok || !data?.url) {
+          setVideoShowcaseUploadStatus({
+            state: "error",
+            message: data?.error ?? "Gagal upload gambar.",
+            categoryIdx,
           });
-          setIsDirty(true);
-        } catch {
           continue;
         }
-      }
-    },
-    [setDraft, setIsDirty]
-  );
-
-  const removeServiceImage = useCallback(
-    async (serviceIndex, url) => {
-      setDraft((current) => {
-        const next = structuredClone(current);
-        const services = Array.isArray(next.servicesSection?.services) ? next.servicesSection.services : [];
-        const svc = services[serviceIndex];
-        if (!svc) return next;
-        const currentImages = Array.isArray(svc.images) ? svc.images : splitLines(svc.images);
-        svc.images = currentImages.filter((s) => s !== url);
-        return next;
-      });
-      setIsDirty(true);
-
-      if (!String(url).startsWith("/uploads/")) return;
-      try {
-        await fetch("/api/admin/uploads", {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url }),
-        });
+        nextUrls.push(String(data.url));
       } catch {
+        setVideoShowcaseUploadStatus({ state: "error", message: "Gagal upload gambar.", categoryIdx });
+      }
+    }
+
+    if (nextUrls.length) {
+      setVideoShowcaseCategoryImages(categoryIdx, (current) =>
+        Array.from(new Set([...current, ...nextUrls])).filter(Boolean)
+      );
+      setVideoShowcaseUploadStatus({ state: "saved", message: "Gambar ditambahkan.", categoryIdx });
+      window.setTimeout(
+        () => setVideoShowcaseUploadStatus({ state: "idle", message: "", categoryIdx: null }),
+        1500
+      );
+    } else {
+      setVideoShowcaseUploadStatus((current) =>
+        current.state === "error" ? current : { state: "idle", message: "", categoryIdx: null }
+      );
+    }
+  };
+
+  const deleteVideoShowcaseImage = async (categoryIdx, url) => {
+    const target = String(url ?? "").trim();
+    if (!target) return;
+
+    if (!isUploadUrl(target)) {
+      setVideoShowcaseCategoryImages(categoryIdx, (current) => current.filter((u) => u !== target));
+      setVideoShowcaseUploadStatus({ state: "saved", message: "Gambar dihapus.", categoryIdx });
+      window.setTimeout(
+        () => setVideoShowcaseUploadStatus({ state: "idle", message: "", categoryIdx: null }),
+        1500
+      );
+      return;
+    }
+
+    setVideoShowcaseUploadStatus({ state: "deleting", message: "", categoryIdx });
+    try {
+      const res = await fetch("/api/admin/uploads", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: target }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
+        setVideoShowcaseUploadStatus({
+          state: "error",
+          message: data?.error ?? "Gagal menghapus gambar.",
+          categoryIdx,
+        });
         return;
       }
-    },
-    [setDraft, setIsDirty]
-  );
+      setVideoShowcaseCategoryImages(categoryIdx, (current) => current.filter((u) => u !== target));
+      setVideoShowcaseUploadStatus({ state: "saved", message: "Gambar dihapus.", categoryIdx });
+      window.setTimeout(
+        () => setVideoShowcaseUploadStatus({ state: "idle", message: "", categoryIdx: null }),
+        1500
+      );
+    } catch {
+      setVideoShowcaseUploadStatus({ state: "error", message: "Gagal menghapus gambar.", categoryIdx });
+    }
+  };
 
   const toggleSection = (sectionKey) => {
     setOpenSection((current) => (current === sectionKey ? null : sectionKey));
+  };
+
+  const uploadArticleImage = async (files) => {
+    const list = Array.from(files ?? []);
+    const file = list[0];
+    if (!file) return;
+
+    const currentUrl = String(articleForm.image ?? "").trim();
+    setArticleUploadStatus({ state: "uploading", message: "" });
+
+    try {
+      if (currentUrl && isUploadUrl(currentUrl)) {
+        await fetch("/api/admin/uploads", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: currentUrl }),
+        }).catch(() => {});
+      }
+
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/admin/uploads", { method: "POST", body: form });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok || !data?.url) {
+        setArticleUploadStatus({ state: "error", message: data?.error ?? "Gagal upload gambar." });
+        return;
+      }
+      setArticleForm((c) => ({ ...c, image: String(data.url) }));
+      setArticleUploadStatus({ state: "saved", message: "Gambar tersimpan." });
+      window.setTimeout(() => setArticleUploadStatus({ state: "idle", message: "" }), 1500);
+    } catch {
+      setArticleUploadStatus({ state: "error", message: "Gagal upload gambar." });
+    }
+  };
+
+  const deleteArticleImage = async () => {
+    const currentUrl = String(articleForm.image ?? "").trim();
+    if (!currentUrl) return;
+
+    if (!isUploadUrl(currentUrl)) {
+      setArticleForm((c) => ({ ...c, image: "" }));
+      setArticleUploadStatus({ state: "saved", message: "Gambar dihapus." });
+      window.setTimeout(() => setArticleUploadStatus({ state: "idle", message: "" }), 1500);
+      return;
+    }
+
+    setArticleUploadStatus({ state: "deleting", message: "" });
+    try {
+      const res = await fetch("/api/admin/uploads", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: currentUrl }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
+        setArticleUploadStatus({ state: "error", message: data?.error ?? "Gagal menghapus gambar." });
+        return;
+      }
+      setArticleForm((c) => ({ ...c, image: "" }));
+      setArticleUploadStatus({ state: "saved", message: "Gambar dihapus." });
+      window.setTimeout(() => setArticleUploadStatus({ state: "idle", message: "" }), 1500);
+    } catch {
+      setArticleUploadStatus({ state: "error", message: "Gagal menghapus gambar." });
+    }
   };
 
   const saveHeroToDatabase = async () => {
@@ -869,6 +1360,11 @@ export default function AdminPage() {
         setAboutDbStatus({ state: "error", message: data?.error ?? "Gagal menyimpan." });
         return;
       }
+      try {
+        new BroadcastChannel("ta_admin").postMessage({ type: "about_saved" });
+      } catch {
+        return;
+      }
       setAboutDbStatus({ state: "saved", message: "Tersimpan ke database." });
       window.setTimeout(() => setAboutDbStatus({ state: "idle", message: "" }), 2000);
     } catch {
@@ -889,11 +1385,11 @@ export default function AdminPage() {
         headingLine2: String(draft.servicesSection?.headingLine2 ?? ""),
         ctaLabel: String(draft.servicesSection?.ctaLabel ?? ""),
         detailCtaLabel: String(draft.servicesSection?.detailCtaLabel ?? ""),
-        services: services.map((s) => ({
-          title: String(s?.title ?? ""),
-          tags: Array.isArray(s?.tags) ? s.tags.map((t) => String(t)).filter(Boolean) : [],
-          description: String(s?.description ?? ""),
-          images: Array.isArray(s?.images) ? s.images.map((i) => String(i)).filter(Boolean) : [],
+        services: services.map((svc) => ({
+          title: String(svc?.title ?? ""),
+          tags: Array.isArray(svc?.tags) ? svc.tags.map((t) => String(t)).filter(Boolean) : splitLines(svc?.tags),
+          description: String(svc?.description ?? ""),
+          images: Array.isArray(svc?.images) ? svc.images.map((i) => String(i)).filter(Boolean) : splitLines(svc?.images),
         })),
       };
 
@@ -907,10 +1403,93 @@ export default function AdminPage() {
         setServicesDbStatus({ state: "error", message: data?.error ?? "Gagal menyimpan." });
         return;
       }
+      try {
+        new BroadcastChannel("ta_admin").postMessage({ type: "services_saved" });
+      } catch {
+        return;
+      }
       setServicesDbStatus({ state: "saved", message: "Tersimpan ke database." });
       window.setTimeout(() => setServicesDbStatus({ state: "idle", message: "" }), 2000);
     } catch {
       setServicesDbStatus({ state: "error", message: "Gagal menyimpan." });
+    }
+  };
+
+  const saveGalleryToDatabase = async () => {
+    setGalleryDbStatus({ state: "saving", message: "" });
+    try {
+      const itemsData = Array.isArray(draft.gallery?.itemsData) ? draft.gallery.itemsData : defaultDraft.gallery.itemsData;
+      const payload = {
+        sideLabel: String(draft.gallery?.sideLabel ?? ""),
+        headingLine1: String(draft.gallery?.headingLine1 ?? ""),
+        headingLine2: String(draft.gallery?.headingLine2 ?? ""),
+        items: clamp(Number(draft.gallery?.items ?? itemsData.length), 0, 99),
+        itemsData: itemsData.map((it, idx) => ({
+          id: Number(it?.id ?? idx + 1),
+          src: String(it?.src ?? ""),
+          srcDesktop: it?.srcDesktop ? String(it.srcDesktop) : null,
+          srcMobile: it?.srcMobile ? String(it.srcMobile) : null,
+          label: String(it?.label ?? ""),
+          desc: String(it?.desc ?? ""),
+        })),
+      };
+
+      const res = await fetch("/api/admin/gallery", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
+        setGalleryDbStatus({ state: "error", message: data?.error ?? "Gagal menyimpan." });
+        return;
+      }
+      try {
+        new BroadcastChannel("ta_admin").postMessage({ type: "gallery_saved" });
+      } catch {
+        return;
+      }
+      setGalleryDbStatus({ state: "saved", message: "Tersimpan ke database." });
+      window.setTimeout(() => setGalleryDbStatus({ state: "idle", message: "" }), 2000);
+    } catch {
+      setGalleryDbStatus({ state: "error", message: "Gagal menyimpan." });
+    }
+  };
+
+  const saveVideoShowcaseToDatabase = async () => {
+    setVideoShowcaseDbStatus({ state: "saving", message: "" });
+    try {
+      const categories = Array.isArray(draft.videoShowcase?.categories) ? draft.videoShowcase.categories : [];
+      const payload = {
+        pillLabel: String(draft.videoShowcase?.pillLabel ?? ""),
+        heading: String(draft.videoShowcase?.heading ?? ""),
+        description: String(draft.videoShowcase?.description ?? ""),
+        categories: categories.map((c) => ({
+          key: String(c?.key ?? ""),
+          label: String(c?.label ?? ""),
+          images: Array.isArray(c?.images) ? c.images.map((s) => String(s)).filter(Boolean) : splitLines(c?.images),
+        })),
+      };
+
+      const res = await fetch("/api/admin/video-showcase", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
+        setVideoShowcaseDbStatus({ state: "error", message: data?.error ?? "Gagal menyimpan." });
+        return;
+      }
+      try {
+        new BroadcastChannel("ta_admin").postMessage({ type: "video_showcase_saved" });
+      } catch {
+        return;
+      }
+      setVideoShowcaseDbStatus({ state: "saved", message: "Tersimpan ke database." });
+      window.setTimeout(() => setVideoShowcaseDbStatus({ state: "idle", message: "" }), 2000);
+    } catch {
+      setVideoShowcaseDbStatus({ state: "error", message: "Gagal menyimpan." });
     }
   };
 
@@ -1022,7 +1601,7 @@ export default function AdminPage() {
                 </a>
               </div>
 
-              <div className="w-full overflow-visible">
+              <div className="w-full overflow-auto">
                 <div className={`mx-auto ${previewWidthClass}`}>
                   <div
                     className="rounded-2xl overflow-hidden border border-border bg-background shadow-[0_25px_70px_rgba(0,0,0,0.6)]"
@@ -1034,7 +1613,7 @@ export default function AdminPage() {
                         src="/"
                         ref={previewFrameRef}
                         onLoad={postPreviewMessage}
-                        className="w-full h-full pointer-events-none"
+                        className="w-full h-full"
                       />
                     </div>
                   </div>
@@ -1189,49 +1768,50 @@ export default function AdminPage() {
                       <label className="block text-xs font-semibold text-text-secondary uppercase tracking-widest mb-2">
                         Gambar Hero
                       </label>
-                      <div className="flex items-center justify-between gap-3 mb-3">
-                        <div className="text-xs text-text-secondary">
-                          Upload akan tersimpan ke /public/uploads (bisa diakses sebagai /uploads/...)
-                        </div>
-                        <label className="h-10 px-4 rounded-full border border-border bg-foreground text-background text-sm font-bold hover:bg-gray-200 transition-colors cursor-pointer">
-                          Tambah Gambar
-                          <input
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            className="hidden"
-                            onChange={(e) => {
-                              const files = e.target.files;
-                              if (files?.length) {
-                                uploadHeroImages(files);
-                              }
-                              e.target.value = "";
-                            }}
-                          />
-                        </label>
-                      </div>
-
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      <div className="flex flex-wrap gap-3">
                         {(Array.isArray(draft.hero.images) ? draft.hero.images : splitLines(draft.hero.images)).map(
-                          (src, idx) => (
-                            <div key={`${src}-${idx}`} className="relative rounded-2xl overflow-hidden border border-border bg-background aspect-[4/3]">
-                              <img
-                                src={src}
-                                alt=""
-                                className="absolute inset-0 w-full h-full object-cover"
-                              />
+                          (url, idx) => (
+                            <div
+                              key={`${url}-${idx}`}
+                              className="relative h-24 w-24 rounded-2xl overflow-hidden border border-border bg-surface"
+                            >
+                              <img src={url} alt="" className="h-full w-full object-cover" loading="lazy" />
                               <button
                                 type="button"
-                                onClick={() => removeHeroImage(src)}
-                                className="absolute top-2 right-2 h-9 w-9 rounded-full bg-black/60 border border-white/15 text-white text-sm font-bold hover:bg-black/80 transition-colors flex items-center justify-center"
-                                aria-label="Hapus gambar"
+                                onClick={() => deleteHeroImage(url)}
+                                className="absolute right-2 top-2 h-8 w-8 rounded-full bg-background/80 backdrop-blur border border-border text-foreground hover:bg-foreground hover:text-background transition-colors flex items-center justify-center text-lg leading-none"
+                                aria-label="Hapus"
                               >
                                 ×
                               </button>
                             </div>
                           )
                         )}
+
+                        <label className="h-24 w-24 rounded-2xl border border-dashed border-border bg-background/40 flex items-center justify-center text-text-secondary text-xs font-semibold cursor-pointer hover:bg-surface transition-colors">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            onChange={(e) => {
+                              uploadHeroFiles(e.target.files);
+                              e.target.value = "";
+                            }}
+                          />
+                          Tambah
+                        </label>
                       </div>
+
+                      {heroUploadStatus.state === "uploading" ? (
+                        <div className="mt-3 text-xs text-text-secondary">Mengunggah...</div>
+                      ) : heroUploadStatus.state === "deleting" ? (
+                        <div className="mt-3 text-xs text-text-secondary">Menghapus...</div>
+                      ) : heroUploadStatus.state === "error" ? (
+                        <div className="mt-3 text-xs text-red-400">{heroUploadStatus.message || "Terjadi error."}</div>
+                      ) : heroUploadStatus.state === "saved" ? (
+                        <div className="mt-3 text-xs text-green-400">{heroUploadStatus.message || "Berhasil."}</div>
+                      ) : null}
                     </div>
                   </div>
                   </div>
@@ -1266,13 +1846,15 @@ export default function AdminPage() {
                     <div className="grid grid-cols-1 gap-4">
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="text-xs text-text-secondary">
-                          {aboutDbStatus.state === "saving"
-                            ? "Menyimpan..."
-                            : aboutDbStatus.state === "saved"
-                              ? aboutDbStatus.message || "Tersimpan."
-                              : aboutDbStatus.state === "error"
-                                ? aboutDbStatus.message || "Gagal menyimpan."
-                                : ""}
+                          {aboutDbStatus.state === "loading"
+                            ? "Memuat..."
+                            : aboutDbStatus.state === "saving"
+                              ? "Menyimpan..."
+                              : aboutDbStatus.state === "saved"
+                                ? aboutDbStatus.message || "Berhasil."
+                                : aboutDbStatus.state === "error"
+                                  ? aboutDbStatus.message || "Terjadi error."
+                                  : ""}
                         </div>
                         <button
                           type="button"
@@ -1280,7 +1862,7 @@ export default function AdminPage() {
                           disabled={aboutDbStatus.state === "saving"}
                           className="h-10 px-4 rounded-full border border-border bg-foreground text-background text-sm font-bold hover:bg-gray-200 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
                         >
-                          Simpan ke Database
+                          Simpan Tentang Kami
                         </button>
                       </div>
 
@@ -1432,27 +2014,29 @@ export default function AdminPage() {
                     </svg>
                   </summary>
                   <div className="px-5 pb-5 pt-0">
-                    <div className="grid grid-cols-1 gap-4">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="text-xs text-text-secondary">
-                          {servicesDbStatus.state === "saving"
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                      <div className="text-xs text-text-secondary">
+                        {servicesDbStatus.state === "loading"
+                          ? "Memuat..."
+                          : servicesDbStatus.state === "saving"
                             ? "Menyimpan..."
                             : servicesDbStatus.state === "saved"
-                              ? servicesDbStatus.message || "Tersimpan."
+                              ? servicesDbStatus.message || "Berhasil."
                               : servicesDbStatus.state === "error"
-                                ? servicesDbStatus.message || "Gagal menyimpan."
+                                ? servicesDbStatus.message || "Terjadi error."
                                 : ""}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={saveServicesToDatabase}
-                          disabled={servicesDbStatus.state === "saving"}
-                          className="h-10 px-4 rounded-full border border-border bg-foreground text-background text-sm font-bold hover:bg-gray-200 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
-                        >
-                          Simpan ke Database
-                        </button>
                       </div>
+                      <button
+                        type="button"
+                        onClick={saveServicesToDatabase}
+                        disabled={servicesDbStatus.state === "saving"}
+                        className="h-10 px-4 rounded-full border border-border bg-foreground text-background text-sm font-bold hover:bg-gray-200 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                      >
+                        Simpan Solusi Kami
+                      </button>
+                    </div>
 
+                    <div className="grid grid-cols-1 gap-4">
                       <div>
                         <label className="block text-xs font-semibold text-text-secondary uppercase tracking-widest mb-2">
                           Label Badge
@@ -1575,52 +2159,50 @@ export default function AdminPage() {
                                   <label className="block text-xs font-semibold text-text-secondary uppercase tracking-widest mb-2">
                                     Gambar
                                   </label>
-                                  <div className="flex items-center justify-between gap-3 mb-3">
-                                    <div className="text-xs text-text-secondary">
-                                      Upload akan tersimpan ke /public/uploads (bisa diakses sebagai /uploads/...)
-                                    </div>
-                                    <label className="h-10 px-4 rounded-full border border-border bg-foreground text-background text-sm font-bold hover:bg-gray-200 transition-colors cursor-pointer">
-                                      Tambah Gambar
-                                      <input
-                                        type="file"
-                                        accept="image/*"
-                                        multiple
-                                        className="hidden"
-                                        onChange={(e) => {
-                                          const files = e.target.files;
-                                          if (files?.length) {
-                                            uploadServiceImages(idx, files);
-                                          }
-                                          e.target.value = "";
-                                        }}
-                                      />
-                                    </label>
-                                  </div>
-
-                                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                  <div className="flex flex-wrap gap-3">
                                     {(Array.isArray(service?.images) ? service.images : splitLines(service?.images)).map(
-                                      (src, imageIdx) => (
+                                      (url, imgIdx) => (
                                         <div
-                                          key={`${src}-${imageIdx}`}
-                                          className="relative rounded-2xl overflow-hidden border border-border bg-background aspect-[4/3]"
+                                          key={`${url}-${imgIdx}`}
+                                          className="relative h-24 w-24 rounded-2xl overflow-hidden border border-border bg-surface"
                                         >
-                                          <img
-                                            src={src}
-                                            alt=""
-                                            className="absolute inset-0 w-full h-full object-cover"
-                                          />
+                                          <img src={url} alt="" className="h-full w-full object-cover" loading="lazy" />
                                           <button
                                             type="button"
-                                            onClick={() => removeServiceImage(idx, src)}
-                                            className="absolute top-2 right-2 h-9 w-9 rounded-full bg-black/60 border border-white/15 text-white text-sm font-bold hover:bg-black/80 transition-colors flex items-center justify-center"
-                                            aria-label="Hapus gambar"
+                                            onClick={() => deleteServiceImage(idx, url)}
+                                            className="absolute right-2 top-2 h-8 w-8 rounded-full bg-background/80 backdrop-blur border border-border text-foreground hover:bg-foreground hover:text-background transition-colors flex items-center justify-center text-lg leading-none"
+                                            aria-label="Hapus"
                                           >
                                             ×
                                           </button>
                                         </div>
                                       )
                                     )}
+
+                                    <label className="h-24 w-24 rounded-2xl border border-dashed border-border bg-background/40 flex items-center justify-center text-text-secondary text-xs font-semibold cursor-pointer hover:bg-surface transition-colors">
+                                      <input
+                                        type="file"
+                                        accept="image/*"
+                                        multiple
+                                        className="hidden"
+                                        onChange={(e) => {
+                                          uploadServiceFiles(idx, e.target.files);
+                                          e.target.value = "";
+                                        }}
+                                      />
+                                      Tambah
+                                    </label>
                                   </div>
+
+                                  {servicesUploadStatus.serviceIdx === idx && servicesUploadStatus.state === "uploading" ? (
+                                    <div className="mt-3 text-xs text-text-secondary">Mengunggah...</div>
+                                  ) : servicesUploadStatus.serviceIdx === idx && servicesUploadStatus.state === "deleting" ? (
+                                    <div className="mt-3 text-xs text-text-secondary">Menghapus...</div>
+                                  ) : servicesUploadStatus.serviceIdx === idx && servicesUploadStatus.state === "error" ? (
+                                    <div className="mt-3 text-xs text-red-400">{servicesUploadStatus.message || "Terjadi error."}</div>
+                                  ) : servicesUploadStatus.serviceIdx === idx && servicesUploadStatus.state === "saved" ? (
+                                    <div className="mt-3 text-xs text-green-400">{servicesUploadStatus.message || "Berhasil."}</div>
+                                  ) : null}
                                 </div>
                               </div>
                             </div>
@@ -1657,6 +2239,28 @@ export default function AdminPage() {
                     </svg>
                   </summary>
                   <div className="px-5 pb-5 pt-0">
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                      <div className="text-xs text-text-secondary">
+                        {galleryDbStatus.state === "loading"
+                          ? "Memuat..."
+                          : galleryDbStatus.state === "saving"
+                            ? "Menyimpan..."
+                            : galleryDbStatus.state === "saved"
+                              ? galleryDbStatus.message || "Berhasil."
+                              : galleryDbStatus.state === "error"
+                                ? galleryDbStatus.message || "Terjadi error."
+                                : ""}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={saveGalleryToDatabase}
+                        disabled={galleryDbStatus.state === "saving"}
+                        className="h-10 px-4 rounded-full border border-border bg-foreground text-background text-sm font-bold hover:bg-gray-200 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                      >
+                        Simpan Gallery
+                      </button>
+                    </div>
+
                     <div className="grid grid-cols-1 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-text-secondary uppercase tracking-widest mb-2">
@@ -1726,14 +2330,46 @@ export default function AdminPage() {
                           <div className="grid grid-cols-1 gap-4">
                             <div>
                               <label className="block text-xs font-semibold text-text-secondary uppercase tracking-widest mb-2">
-                                Gambar (src)
+                                Gambar
                               </label>
-                              <input
-                                value={item?.src ?? ""}
-                                onChange={(e) => updateDraft(["gallery", "itemsData", idx, "src"], e.target.value)}
-                                className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-text-secondary transition-all"
-                                type="text"
-                              />
+                              <div className="flex flex-wrap gap-3">
+                                {item?.src ? (
+                                  <div className="relative h-24 w-24 rounded-2xl overflow-hidden border border-border bg-surface">
+                                    <img src={item.src} alt="" className="h-full w-full object-cover" loading="lazy" />
+                                    <button
+                                      type="button"
+                                      onClick={() => deleteGalleryItemImage(idx)}
+                                      className="absolute right-2 top-2 h-8 w-8 rounded-full bg-background/80 backdrop-blur border border-border text-foreground hover:bg-foreground hover:text-background transition-colors flex items-center justify-center text-lg leading-none"
+                                      aria-label="Hapus"
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                ) : null}
+
+                                <label className="h-24 w-24 rounded-2xl border border-dashed border-border bg-background/40 flex items-center justify-center text-text-secondary text-xs font-semibold cursor-pointer hover:bg-surface transition-colors">
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                      uploadGalleryItemFile(idx, e.target.files);
+                                      e.target.value = "";
+                                    }}
+                                  />
+                                  {item?.src ? "Ganti" : "Tambah"}
+                                </label>
+                              </div>
+
+                              {galleryUploadStatus.itemIdx === idx && galleryUploadStatus.state === "uploading" ? (
+                                <div className="mt-3 text-xs text-text-secondary">Mengunggah...</div>
+                              ) : galleryUploadStatus.itemIdx === idx && galleryUploadStatus.state === "deleting" ? (
+                                <div className="mt-3 text-xs text-text-secondary">Menghapus...</div>
+                              ) : galleryUploadStatus.itemIdx === idx && galleryUploadStatus.state === "error" ? (
+                                <div className="mt-3 text-xs text-red-400">{galleryUploadStatus.message || "Terjadi error."}</div>
+                              ) : galleryUploadStatus.itemIdx === idx && galleryUploadStatus.state === "saved" ? (
+                                <div className="mt-3 text-xs text-green-400">{galleryUploadStatus.message || "Berhasil."}</div>
+                              ) : null}
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1796,6 +2432,28 @@ export default function AdminPage() {
                   </summary>
                   <div className="px-5 pb-5 pt-0">
                     <div className="grid grid-cols-1 gap-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="text-xs text-text-secondary">
+                          {videoShowcaseDbStatus.state === "loading"
+                            ? "Memuat..."
+                            : videoShowcaseDbStatus.state === "saving"
+                              ? "Menyimpan..."
+                              : videoShowcaseDbStatus.state === "saved"
+                                ? videoShowcaseDbStatus.message || "Berhasil."
+                                : videoShowcaseDbStatus.state === "error"
+                                  ? videoShowcaseDbStatus.message || "Terjadi error."
+                                  : ""}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={saveVideoShowcaseToDatabase}
+                          disabled={videoShowcaseDbStatus.state === "saving"}
+                          className="h-10 px-4 rounded-full border border-border bg-foreground text-background text-sm font-bold hover:bg-gray-200 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                        >
+                          Simpan Video Showcase
+                        </button>
+                      </div>
+
                     <div>
                       <label className="block text-xs font-semibold text-text-secondary uppercase tracking-widest mb-2">
                         Label Badge
@@ -1862,19 +2520,58 @@ export default function AdminPage() {
 
                               <div>
                                 <label className="block text-xs font-semibold text-text-secondary uppercase tracking-widest mb-2">
-                                  Foto (path/URL, pisahkan dengan koma atau baris baru)
+                                  Foto
                                 </label>
-                                <textarea
-                                  value={(Array.isArray(cat?.images) ? cat.images : splitLines(cat?.images)).join("\n")}
-                                  onChange={(e) =>
-                                    updateDraft(
-                                      ["videoShowcase", "categories", idx, "images"],
-                                      splitLines(e.target.value)
-                                    )
-                                  }
-                                  className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-text-secondary transition-all resize-none"
-                                  rows={5}
-                                />
+                                <div className="flex flex-wrap gap-3">
+                                  {(Array.isArray(cat?.images) ? cat.images : splitLines(cat?.images)).map((url, imgIdx) => (
+                                    <div
+                                      key={`${url}-${imgIdx}`}
+                                      className="relative h-24 w-24 rounded-2xl overflow-hidden border border-border bg-surface"
+                                    >
+                                      <img src={url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                                      <button
+                                        type="button"
+                                        onClick={() => deleteVideoShowcaseImage(idx, url)}
+                                        className="absolute right-2 top-2 h-8 w-8 rounded-full bg-background/80 backdrop-blur border border-border text-foreground hover:bg-foreground hover:text-background transition-colors flex items-center justify-center text-lg leading-none"
+                                        aria-label="Hapus"
+                                      >
+                                        ×
+                                      </button>
+                                    </div>
+                                  ))}
+
+                                  <label className="h-24 w-24 rounded-2xl border border-dashed border-border bg-background/40 flex items-center justify-center text-text-secondary text-xs font-semibold cursor-pointer hover:bg-surface transition-colors">
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      multiple
+                                      className="hidden"
+                                      onChange={(e) => {
+                                        uploadVideoShowcaseFiles(idx, e.target.files);
+                                        e.target.value = "";
+                                      }}
+                                    />
+                                    Tambah
+                                  </label>
+                                </div>
+
+                                {videoShowcaseUploadStatus.categoryIdx === idx &&
+                                videoShowcaseUploadStatus.state === "uploading" ? (
+                                  <div className="mt-3 text-xs text-text-secondary">Mengunggah...</div>
+                                ) : videoShowcaseUploadStatus.categoryIdx === idx &&
+                                  videoShowcaseUploadStatus.state === "deleting" ? (
+                                  <div className="mt-3 text-xs text-text-secondary">Menghapus...</div>
+                                ) : videoShowcaseUploadStatus.categoryIdx === idx &&
+                                  videoShowcaseUploadStatus.state === "error" ? (
+                                  <div className="mt-3 text-xs text-red-400">
+                                    {videoShowcaseUploadStatus.message || "Terjadi error."}
+                                  </div>
+                                ) : videoShowcaseUploadStatus.categoryIdx === idx &&
+                                  videoShowcaseUploadStatus.state === "saved" ? (
+                                  <div className="mt-3 text-xs text-green-400">
+                                    {videoShowcaseUploadStatus.message || "Berhasil."}
+                                  </div>
+                                ) : null}
                               </div>
                             </div>
                           </div>
@@ -1961,11 +2658,15 @@ export default function AdminPage() {
                                   onChange={(e) =>
                                     setArticleForm((c) => ({ ...c, id: slugify(e.target.value) }))
                                   }
-                                  disabled={articleMode === "edit"}
-                                  className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-text-secondary transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                                  className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-text-secondary transition-all"
                                   type="text"
                                   placeholder="contoh: jakarta"
                                 />
+                                {articleMode === "edit" && articleForm.originalId && articleForm.originalId !== articleForm.id ? (
+                                  <div className="mt-2 text-xs text-text-secondary">
+                                    ID lama: <span className="font-semibold">{articleForm.originalId}</span> (akan dipindahkan saat simpan)
+                                  </div>
+                                ) : null}
                               </div>
 
                               <div>
@@ -2032,39 +2733,366 @@ export default function AdminPage() {
 
                             <div>
                               <label className="block text-xs font-semibold text-text-secondary uppercase tracking-widest mb-2">
-                                Gambar (path/URL)
+                                Gambar Artikel
                               </label>
-                              <input
-                                value={articleForm.image}
-                                onChange={(e) => setArticleForm((c) => ({ ...c, image: e.target.value }))}
-                                className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-text-secondary transition-all"
-                                type="text"
-                              />
+                              <div className="flex flex-wrap gap-3 items-start">
+                                {articleForm.image ? (
+                                  <div className="relative h-24 w-24 rounded-2xl overflow-hidden border border-border bg-surface">
+                                    <img src={articleForm.image} alt="" className="h-full w-full object-cover" loading="lazy" />
+                                    <button
+                                      type="button"
+                                      onClick={deleteArticleImage}
+                                      className="absolute right-2 top-2 h-8 w-8 rounded-full bg-background/80 backdrop-blur border border-border text-foreground hover:bg-foreground hover:text-background transition-colors flex items-center justify-center text-lg leading-none"
+                                      aria-label="Hapus"
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                ) : null}
+
+                                <label className="h-24 w-24 rounded-2xl border border-dashed border-border bg-background/40 flex items-center justify-center text-text-secondary text-xs font-semibold cursor-pointer hover:bg-surface transition-colors">
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                      uploadArticleImage(e.target.files);
+                                      e.target.value = "";
+                                    }}
+                                  />
+                                  {articleForm.image ? "Ganti" : "Tambah"}
+                                </label>
+                              </div>
+
+                              {articleUploadStatus.state === "uploading" ? (
+                                <div className="mt-3 text-xs text-text-secondary">Mengunggah...</div>
+                              ) : articleUploadStatus.state === "deleting" ? (
+                                <div className="mt-3 text-xs text-text-secondary">Menghapus...</div>
+                              ) : articleUploadStatus.state === "error" ? (
+                                <div className="mt-3 text-xs text-red-400">{articleUploadStatus.message || "Terjadi error."}</div>
+                              ) : articleUploadStatus.state === "saved" ? (
+                                <div className="mt-3 text-xs text-green-400">{articleUploadStatus.message || "Berhasil."}</div>
+                              ) : null}
+
+                              <div className="mt-3">
+                                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-widest mb-2">
+                                  URL Manual (opsional)
+                                </label>
+                                <input
+                                  value={articleForm.image}
+                                  onChange={(e) => setArticleForm((c) => ({ ...c, image: e.target.value }))}
+                                  className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-text-secondary transition-all"
+                                  type="text"
+                                  placeholder="/uploads/xxx.jpg atau /SPG/SPG-1.JPG"
+                                />
+                              </div>
                             </div>
 
                             <div>
                               <label className="block text-xs font-semibold text-text-secondary uppercase tracking-widest mb-2">
-                                Excerpt
+                                Konten Artikel (Drag & Drop)
                               </label>
-                              <textarea
-                                value={articleForm.excerpt}
-                                onChange={(e) => setArticleForm((c) => ({ ...c, excerpt: e.target.value }))}
-                                className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-text-secondary transition-all resize-none"
-                                rows={3}
-                              />
-                            </div>
 
-                            <div>
-                              <label className="block text-xs font-semibold text-text-secondary uppercase tracking-widest mb-2">
-                                Konten (JSON)
-                              </label>
-                              <textarea
-                                value={articleForm.contentJson}
-                                onChange={(e) => setArticleForm((c) => ({ ...c, contentJson: e.target.value }))}
-                                className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-text-secondary transition-all font-mono text-xs leading-relaxed resize-none"
-                                rows={10}
-                                spellCheck={false}
-                              />
+                              <div className="space-y-4">
+                                {(Array.isArray(articleForm.contentOrder) ? articleForm.contentOrder : []).map(
+                                  (blockKey, blockIndex) => {
+                                    const label =
+                                      blockKey === "excerpt"
+                                        ? "Excerpt"
+                                        : blockKey === "intro"
+                                          ? "Intro"
+                                          : blockKey === "servicesTitle"
+                                            ? "Judul Layanan"
+                                            : blockKey === "services"
+                                              ? "List Layanan"
+                                              : blockKey === "reasonsTitle"
+                                                ? "Judul Alasan"
+                                                : blockKey === "reasons"
+                                                  ? "List Alasan"
+                                                  : blockKey === "cta"
+                                                    ? "CTA"
+                                                    : "Label WhatsApp";
+
+                                    return (
+                                      <div
+                                        key={`${blockKey}-${blockIndex}`}
+                                        className="rounded-2xl border border-border bg-background/40 p-4"
+                                        onDragOver={(e) => {
+                                          if (!Number.isInteger(articleBlockDragIndex)) return;
+                                          e.preventDefault();
+                                          e.dataTransfer.dropEffect = "move";
+                                        }}
+                                        onDrop={(e) => {
+                                          if (!Number.isInteger(articleBlockDragIndex)) return;
+                                          e.preventDefault();
+                                          const from = articleBlockDragIndex;
+                                          const to = blockIndex;
+                                          setArticleForm((c) => ({
+                                            ...c,
+                                            contentOrder: moveArrayItem(c.contentOrder, from, to),
+                                          }));
+                                          setArticleBlockDragIndex(null);
+                                        }}
+                                      >
+                                        <div className="flex items-center justify-between gap-3 mb-3">
+                                          <div className="flex items-center gap-2">
+                                            <button
+                                              type="button"
+                                              draggable
+                                              onDragStart={(e) => {
+                                                e.dataTransfer.effectAllowed = "move";
+                                                setArticleBlockDragIndex(blockIndex);
+                                              }}
+                                              onDragEnd={() => setArticleBlockDragIndex(null)}
+                                              className="h-9 w-9 rounded-full border border-border bg-background text-foreground hover:bg-foreground hover:text-background transition-colors flex items-center justify-center text-sm font-bold cursor-grab active:cursor-grabbing"
+                                              aria-label="Drag"
+                                            >
+                                              ≡
+                                            </button>
+                                            <div className="text-xs font-semibold tracking-[0.3em] uppercase text-text-secondary">
+                                              {label}
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        {blockKey === "excerpt" ? (
+                                          <textarea
+                                            value={articleForm.excerpt}
+                                            onChange={(e) => setArticleForm((c) => ({ ...c, excerpt: e.target.value }))}
+                                            className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-text-secondary transition-all resize-none"
+                                            rows={3}
+                                          />
+                                        ) : blockKey === "intro" ? (
+                                          <textarea
+                                            value={articleForm.intro}
+                                            onChange={(e) => setArticleForm((c) => ({ ...c, intro: e.target.value }))}
+                                            className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-text-secondary transition-all resize-none"
+                                            rows={3}
+                                          />
+                                        ) : blockKey === "servicesTitle" ? (
+                                          <input
+                                            value={articleForm.servicesTitle}
+                                            onChange={(e) => setArticleForm((c) => ({ ...c, servicesTitle: e.target.value }))}
+                                            className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-text-secondary transition-all"
+                                            type="text"
+                                          />
+                                        ) : blockKey === "services" ? (
+                                          <>
+                                            <div className="flex items-center justify-end gap-2 mb-3">
+                                              <button
+                                                type="button"
+                                                onClick={() =>
+                                                  setArticleForm((c) => ({
+                                                    ...c,
+                                                    services: [...(Array.isArray(c.services) ? c.services : []), ""],
+                                                  }))
+                                                }
+                                                className="h-9 px-3 rounded-full border border-border bg-surface text-foreground text-xs font-semibold hover:bg-foreground hover:text-background transition-colors"
+                                              >
+                                                Tambah
+                                              </button>
+                                            </div>
+                                            <div className="space-y-2">
+                                              {(Array.isArray(articleForm.services) ? articleForm.services : []).map((v, i) => (
+                                                <div
+                                                  key={i}
+                                                  className="flex items-center gap-2"
+                                                  onDragOver={(e) => {
+                                                    if (articleDrag.list !== "services") return;
+                                                    e.preventDefault();
+                                                    e.dataTransfer.dropEffect = "move";
+                                                  }}
+                                                  onDrop={(e) => {
+                                                    if (articleDrag.list !== "services") return;
+                                                    e.preventDefault();
+                                                    const from = articleDrag.index;
+                                                    const to = i;
+                                                    setArticleForm((c) => ({
+                                                      ...c,
+                                                      services: moveArrayItem(c.services, from, to),
+                                                    }));
+                                                    setArticleDrag({ list: null, index: null });
+                                                  }}
+                                                >
+                                                  <button
+                                                    type="button"
+                                                    draggable
+                                                    onDragStart={(e) => {
+                                                      e.dataTransfer.effectAllowed = "move";
+                                                      setArticleDrag({ list: "services", index: i });
+                                                    }}
+                                                    onDragEnd={() => setArticleDrag({ list: null, index: null })}
+                                                    className="h-10 w-10 rounded-full border border-border bg-background text-foreground hover:bg-foreground hover:text-background transition-colors flex items-center justify-center text-sm font-bold cursor-grab active:cursor-grabbing"
+                                                    aria-label="Drag"
+                                                  >
+                                                    ≡
+                                                  </button>
+                                                  <input
+                                                    value={v}
+                                                    onChange={(e) =>
+                                                      setArticleForm((c) => {
+                                                        const next = Array.isArray(c.services) ? [...c.services] : [];
+                                                        next[i] = e.target.value;
+                                                        return { ...c, services: next };
+                                                      })
+                                                    }
+                                                    className="flex-1 bg-surface border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-text-secondary transition-all"
+                                                    type="text"
+                                                  />
+                                                  <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                      setArticleForm((c) => ({
+                                                        ...c,
+                                                        services: insertArrayItemAfter(c.services, i, ""),
+                                                      }))
+                                                    }
+                                                    className="h-10 w-10 rounded-full border border-border bg-surface text-foreground hover:bg-foreground hover:text-background transition-colors flex items-center justify-center text-lg leading-none"
+                                                    aria-label="Tambah"
+                                                  >
+                                                    +
+                                                  </button>
+                                                  <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                      setArticleForm((c) => {
+                                                        const next = Array.isArray(c.services)
+                                                          ? c.services.filter((_, idx) => idx !== i)
+                                                          : [];
+                                                        return { ...c, services: next.length ? next : [""] };
+                                                      })
+                                                    }
+                                                    className="h-10 w-10 rounded-full border border-border bg-background text-foreground hover:bg-foreground hover:text-background transition-colors flex items-center justify-center text-lg leading-none"
+                                                    aria-label="Hapus"
+                                                  >
+                                                    ×
+                                                  </button>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </>
+                                        ) : blockKey === "reasonsTitle" ? (
+                                          <input
+                                            value={articleForm.reasonsTitle}
+                                            onChange={(e) => setArticleForm((c) => ({ ...c, reasonsTitle: e.target.value }))}
+                                            className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-text-secondary transition-all"
+                                            type="text"
+                                          />
+                                        ) : blockKey === "reasons" ? (
+                                          <>
+                                            <div className="flex items-center justify-end gap-2 mb-3">
+                                              <button
+                                                type="button"
+                                                onClick={() =>
+                                                  setArticleForm((c) => ({
+                                                    ...c,
+                                                    reasons: [...(Array.isArray(c.reasons) ? c.reasons : []), ""],
+                                                  }))
+                                                }
+                                                className="h-9 px-3 rounded-full border border-border bg-surface text-foreground text-xs font-semibold hover:bg-foreground hover:text-background transition-colors"
+                                              >
+                                                Tambah
+                                              </button>
+                                            </div>
+                                            <div className="space-y-2">
+                                              {(Array.isArray(articleForm.reasons) ? articleForm.reasons : []).map((v, i) => (
+                                                <div
+                                                  key={i}
+                                                  className="flex items-center gap-2"
+                                                  onDragOver={(e) => {
+                                                    if (articleDrag.list !== "reasons") return;
+                                                    e.preventDefault();
+                                                    e.dataTransfer.dropEffect = "move";
+                                                  }}
+                                                  onDrop={(e) => {
+                                                    if (articleDrag.list !== "reasons") return;
+                                                    e.preventDefault();
+                                                    const from = articleDrag.index;
+                                                    const to = i;
+                                                    setArticleForm((c) => ({
+                                                      ...c,
+                                                      reasons: moveArrayItem(c.reasons, from, to),
+                                                    }));
+                                                    setArticleDrag({ list: null, index: null });
+                                                  }}
+                                                >
+                                                  <button
+                                                    type="button"
+                                                    draggable
+                                                    onDragStart={(e) => {
+                                                      e.dataTransfer.effectAllowed = "move";
+                                                      setArticleDrag({ list: "reasons", index: i });
+                                                    }}
+                                                    onDragEnd={() => setArticleDrag({ list: null, index: null })}
+                                                    className="h-10 w-10 rounded-full border border-border bg-background text-foreground hover:bg-foreground hover:text-background transition-colors flex items-center justify-center text-sm font-bold cursor-grab active:cursor-grabbing"
+                                                    aria-label="Drag"
+                                                  >
+                                                    ≡
+                                                  </button>
+                                                  <input
+                                                    value={v}
+                                                    onChange={(e) =>
+                                                      setArticleForm((c) => {
+                                                        const next = Array.isArray(c.reasons) ? [...c.reasons] : [];
+                                                        next[i] = e.target.value;
+                                                        return { ...c, reasons: next };
+                                                      })
+                                                    }
+                                                    className="flex-1 bg-surface border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-text-secondary transition-all"
+                                                    type="text"
+                                                  />
+                                                  <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                      setArticleForm((c) => ({
+                                                        ...c,
+                                                        reasons: insertArrayItemAfter(c.reasons, i, ""),
+                                                      }))
+                                                    }
+                                                    className="h-10 w-10 rounded-full border border-border bg-surface text-foreground hover:bg-foreground hover:text-background transition-colors flex items-center justify-center text-lg leading-none"
+                                                    aria-label="Tambah"
+                                                  >
+                                                    +
+                                                  </button>
+                                                  <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                      setArticleForm((c) => {
+                                                        const next = Array.isArray(c.reasons)
+                                                          ? c.reasons.filter((_, idx) => idx !== i)
+                                                          : [];
+                                                        return { ...c, reasons: next.length ? next : [""] };
+                                                      })
+                                                    }
+                                                    className="h-10 w-10 rounded-full border border-border bg-background text-foreground hover:bg-foreground hover:text-background transition-colors flex items-center justify-center text-lg leading-none"
+                                                    aria-label="Hapus"
+                                                  >
+                                                    ×
+                                                  </button>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </>
+                                        ) : blockKey === "cta" ? (
+                                          <textarea
+                                            value={articleForm.cta}
+                                            onChange={(e) => setArticleForm((c) => ({ ...c, cta: e.target.value }))}
+                                            className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-text-secondary transition-all resize-none"
+                                            rows={3}
+                                          />
+                                        ) : (
+                                          <input
+                                            value={articleForm.whatsappLabel}
+                                            onChange={(e) => setArticleForm((c) => ({ ...c, whatsappLabel: e.target.value }))}
+                                            className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-text-secondary transition-all"
+                                            type="text"
+                                          />
+                                        )}
+                                      </div>
+                                    );
+                                  }
+                                )}
+                              </div>
                             </div>
 
                             <div className="flex flex-wrap items-center gap-2">
@@ -2080,7 +3108,7 @@ export default function AdminPage() {
                                 <>
                                   <button
                                     type="button"
-                                    onClick={() => deleteArticle(articleForm.id)}
+                                    onClick={() => deleteArticle(articleForm.originalId || articleForm.id)}
                                     disabled={articlesDbStatus.state === "saving" || articlesDbStatus.state === "deleting"}
                                     className="h-10 px-4 rounded-full border border-border bg-background text-foreground text-sm font-semibold hover:bg-foreground hover:text-background transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
                                   >

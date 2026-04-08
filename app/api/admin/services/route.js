@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export const runtime = "nodejs";
-
 const COOKIE_NAME = "ta_admin_session";
 
 function getSessionToken() {
@@ -17,16 +15,6 @@ function isAuthorized(request) {
   if (!expected) return false;
   const token = request.cookies.get(COOKIE_NAME)?.value;
   return token === expected;
-}
-
-function sanitizeServices(value) {
-  const list = Array.isArray(value) ? value : [];
-  return list.map((svc) => ({
-    title: String(svc?.title ?? ""),
-    tags: Array.isArray(svc?.tags) ? svc.tags.map((t) => String(t)).filter(Boolean) : [],
-    description: String(svc?.description ?? ""),
-    images: Array.isArray(svc?.images) ? svc.images.map((s) => String(s)).filter(Boolean) : [],
-  }));
 }
 
 export async function GET(request) {
@@ -74,7 +62,7 @@ export async function PUT(request) {
   const headingLine2 = String(body?.headingLine2 ?? "");
   const ctaLabel = String(body?.ctaLabel ?? "");
   const detailCtaLabel = String(body?.detailCtaLabel ?? "");
-  const services = sanitizeServices(body?.services);
+  const services = Array.isArray(body?.services) ? body.services : null;
 
   try {
     const saved = await prisma.servicesContent.upsert({
@@ -84,8 +72,8 @@ export async function PUT(request) {
     });
     return NextResponse.json({ ok: true, services: saved });
   } catch (e) {
-    const msg = String(e?.message ?? "");
-    if (msg.toLowerCase().includes("does not exist") || msg.toLowerCase().includes("unknown table")) {
+    const msg = String(e?.message ?? "").toLowerCase();
+    if (msg.includes("does not exist") || msg.includes("unknown table")) {
       return NextResponse.json(
         {
           ok: false,
