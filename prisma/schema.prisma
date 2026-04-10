@@ -6,6 +6,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
 }
 
 datasource db {
@@ -87,4 +88,10 @@ model VideoShowcaseContent {
   categories  Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model SectionEditLimit {
+  id        String   @id // Contoh: "about", "services", "gallery", "videoShowcase", "articles"
+  editCount Int      @default(0)
+  updatedAt DateTime @updatedAt
 }

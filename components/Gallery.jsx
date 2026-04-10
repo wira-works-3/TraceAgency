@@ -234,12 +234,12 @@ export default function Gallery() {
             return (
               <motion.div 
                 key={img.id}
-                // Ubah tinggi (height) menggunakan 'vh' dan 'max-h' agar gambar mengecil otomatis jika layar laptop pendek, 
-                // sehingga tidak akan menabrak teks di atasnya.
+                // FIX: Menambahkan lg:w-auto dan lg:aspect-[...] khusus desktop
+                // Mobile & Tablet (md:) tetap pakai ukuran aslinya
                 className={`relative shrink-0 cursor-pointer shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden border-8 border-background ${
                   img.id % 2 === 0 
-                    ? 'w-[350px] md:w-[450px] h-[45vh] md:h-[55vh] max-h-[600px]' 
-                    : 'w-[300px] md:w-[350px] h-[35vh] md:h-[45vh] max-h-[450px]'
+                    ? 'w-[350px] h-[45vh] md:w-[450px] md:h-[55vh] lg:w-auto lg:aspect-[3/4] max-h-[600px]' 
+                    : 'w-[300px] h-[35vh] md:w-[350px] md:h-[45vh] lg:w-auto lg:aspect-[35/45] max-h-[450px]'
                 }`}
                 onMouseEnter={() => setHoveredProject(img)}
                 onMouseLeave={() => setHoveredProject(null)}

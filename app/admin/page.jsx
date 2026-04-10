@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { galleryData } from "@/data/gallery";
 
 const STORAGE_KEY = "traceagency_admin_draft_v1";
+const MAX_FREE_EDITS = 5;
 
 const defaultDraft = {
   hero: {
@@ -222,6 +223,10 @@ export default function AdminPage() {
   const [articleDrag, setArticleDrag] = useState({ list: null, index: null });
   const [articleBlockDragIndex, setArticleBlockDragIndex] = useState(null);
   const [articles, setArticles] = useState([]);
+  const [sectionEditCounts, setSectionEditCounts] = useState({ about: 0, services: 0, gallery: 0, videoShowcase: 0, articles: 0 });
+  const [sectionUnlockInput, setSectionUnlockInput] = useState({ about: "", services: "", gallery: "", videoShowcase: "", articles: "" });
+  const [sectionUnlockError, setSectionUnlockError] = useState({ about: false, services: false, gallery: false, videoShowcase: false, articles: false });
+  const [sectionUnlockVisible, setSectionUnlockVisible] = useState({ about: false, services: false, gallery: false, videoShowcase: false, articles: false });
   const [articleMode, setArticleMode] = useState("create");
   const [articleForm, setArticleForm] = useState({
     originalId: "",
@@ -330,6 +335,21 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
+    const fetchEditCounts = async () => {
+      try {
+        const res = await fetch("/api/admin/edit-limits");
+        const json = await res.json();
+        if (json.ok && json.editCounts) {
+          setSectionEditCounts(json.editCounts);
+        }
+      } catch (err) {
+        console.error("Gagal memuat API batas edit", err);
+      }
+    };
+    fetchEditCounts();
+  }, []);
+
+  useEffect(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (!raw) return;
@@ -410,6 +430,45 @@ export default function AdminPage() {
     loadArticles();
   }, [hasLoadedLocalDraft, loadArticles]);
 
+  const loadHeroFromDatabase = useCallback(async () => {
+    setHeroDbStatus({ state: "loading", message: "" });
+    try {
+      const res = await fetch("/api/admin/hero");
+      const data = await res.json().catch(() => null);
+      
+      if (!res.ok || !data?.ok) {
+        setHeroDbStatus({ state: "error", message: data?.error ?? "Gagal memuat." });
+        return;
+      }
+      
+      const saved = data.hero;
+      if (!saved) {
+        setHeroDbStatus({ state: "idle", message: "" });
+        return;
+      }
+
+      setDraft((current) => {
+        const next = structuredClone(current);
+        next.hero = {
+          ...next.hero,
+          badge: String(saved.badge ?? next.hero?.badge ?? ""),
+          titleLine1: String(saved.titleLine1 ?? next.hero?.titleLine1 ?? ""),
+          titleLine2: String(saved.titleLine2 ?? next.hero?.titleLine2 ?? ""),
+          description: String(saved.description ?? next.hero?.description ?? ""),
+          primaryCtaLabel: String(saved.primaryCtaLabel ?? next.hero?.primaryCtaLabel ?? ""),
+          secondaryCtaLabel: String(saved.secondaryCtaLabel ?? next.hero?.secondaryCtaLabel ?? ""),
+          // Pastikan clients dan images selalu diformat sebagai Array dengan aman
+          clients: Array.isArray(saved.clients) ? saved.clients.map(String).filter(Boolean) : next.hero?.clients ?? [],
+          images: Array.isArray(saved.images) ? saved.images.map(String).filter(Boolean) : next.hero?.images ?? [],
+        };
+        return next;
+      });
+      setHeroDbStatus({ state: "idle", message: "" });
+    } catch {
+      setHeroDbStatus({ state: "error", message: "Gagal memuat." });
+    }
+  }, []);
+
   const loadAboutFromDatabase = useCallback(async () => {
     setAboutDbStatus({ state: "loading", message: "" });
     try {
@@ -446,6 +505,10 @@ export default function AdminPage() {
     loadAboutFromDatabase();
   }, [hasLoadedLocalDraft, loadAboutFromDatabase]);
 
+  useEffect(() => {
+    if (!hasLoadedLocalDraft) return;
+    loadHeroFromDatabase();
+  }, [hasLoadedLocalDraft, loadHeroFromDatabase]);
   const loadServicesFromDatabase = useCallback(async () => {
     setServicesDbStatus({ state: "loading", message: "" });
     try {
@@ -685,6 +748,7 @@ export default function AdminPage() {
       }
 
       await loadArticles();
+      incrementEditCount("articles");
       setArticlesDbStatus({ state: "saved", message: "Artikel tersimpan." });
       window.setTimeout(() => setArticlesDbStatus({ state: "idle", message: "" }), 2000);
       if (isCreate) resetArticleForm();
@@ -919,7 +983,7 @@ export default function AdminPage() {
   const setHeroImages = (updater) => {
     setDraft((current) => {
       const next = structuredClone(current);
-      const currentImages = Array.isArray(next.hero.images) ? next.hero.images : splitLines(next.hero.images);
+      const currentImages = Array.isArray(next.hero?.images) ? next.hero.images : splitLines(next.hero?.images);
       next.hero.images = updater(currentImages);
       return next;
     });
@@ -955,36 +1019,48 @@ export default function AdminPage() {
     }
 
     if (nextUrls.length) {
+      // Tambahkan ke draft dan langsung simpan ke database agar perubahan permanen
       setHeroImages((current) => Array.from(new Set([...current, ...nextUrls])).filter(Boolean));
-      setHeroUploadStatus({ state: "saved", message: "Gambar ditambahkan." });
+
+      try {
+        await saveHeroToDatabase();
+        setHeroUploadStatus({ state: "saved", message: "Gambar ditambahkan." });
+      } catch {
+        setHeroUploadStatus({ state: "error", message: "Gagal menyimpan ke database." });
+      }
+
       window.setTimeout(() => setHeroUploadStatus({ state: "idle", message: "" }), 1500);
     } else {
       setHeroUploadStatus((current) => (current.state === "error" ? current : { state: "idle", message: "" }));
     }
   };
 
+  // 5. Perbarui fungsi hapus gambar Hero
   const deleteHeroImage = async (url) => {
     const target = String(url ?? "").trim();
     if (!target) return;
-    if (!isUploadUrl(target)) {
-      setHeroImages((current) => current.filter((u) => u !== target));
-      setHeroUploadStatus({ state: "saved", message: "Gambar dihapus." });
-      window.setTimeout(() => setHeroUploadStatus({ state: "idle", message: "" }), 1500);
-      return;
-    }
+    
     setHeroUploadStatus({ state: "deleting", message: "" });
+
     try {
-      const res = await fetch("/api/admin/uploads", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: target }),
-      });
-      const data = await res.json().catch(() => null);
-      if (!res.ok || !data?.ok) {
-        setHeroUploadStatus({ state: "error", message: data?.error ?? "Gagal menghapus gambar." });
-        return;
+      // Jika file hasil upload, hapus dulu file fisiknya
+      if (isUploadUrl(target)) {
+        const res = await fetch("/api/admin/uploads", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: target }),
+        });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.ok) {
+          setHeroUploadStatus({ state: "error", message: data?.error ?? "Gagal menghapus gambar." });
+          return;
+        }
       }
+
+      // Hapus dari draft dan langsung simpan ke database supaya permanen
       setHeroImages((current) => current.filter((u) => u !== target));
+      await saveHeroToDatabase();
+
       setHeroUploadStatus({ state: "saved", message: "Gambar dihapus." });
       window.setTimeout(() => setHeroUploadStatus({ state: "idle", message: "" }), 1500);
     } catch {
@@ -1313,29 +1389,75 @@ export default function AdminPage() {
     }
   };
 
+  const isSectionLocked = (key) => (sectionEditCounts[key] ?? 0) >= MAX_FREE_EDITS;
+
+  const incrementEditCount = async (key) => {
+    setSectionEditCounts((prev) => ({ ...prev, [key]: (prev[key] ?? 0) + 1 }));
+    try {
+      await fetch("/api/admin/edit-limits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "increment", section: key }),
+      });
+    } catch {}
+  };
+
+  const handleUnlockSection = async (key) => {
+    const input = (sectionUnlockInput[key] ?? "").trim();
+    if (!input) return;
+
+    setSectionUnlockError((prev) => ({ ...prev, [key]: false }));
+    try {
+      const res = await fetch("/api/admin/edit-limits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "unlock", section: key, password: input }),
+      });
+      const data = await res.json();
+
+      if (data.ok) {
+        setSectionEditCounts((prev) => ({ ...prev, [key]: 0 }));
+        setSectionUnlockInput((prev) => ({ ...prev, [key]: "" }));
+        setSectionUnlockError((prev) => ({ ...prev, [key]: false }));
+        setSectionUnlockVisible((prev) => ({ ...prev, [key]: false }));
+      } else {
+        setSectionUnlockError((prev) => ({ ...prev, [key]: true }));
+      }
+    } catch {
+      setSectionUnlockError((prev) => ({ ...prev, [key]: true }));
+    }
+  };
+
+  // 6. Perbarui fungsi Simpan ke Database
   const saveHeroToDatabase = async () => {
     setHeroDbStatus({ state: "saving", message: "" });
     try {
       const payload = {
-        badge: draft.hero.badge,
-        titleLine1: draft.hero.titleLine1,
-        titleLine2: draft.hero.titleLine2,
-        description: draft.hero.description,
-        primaryCtaLabel: draft.hero.primaryCtaLabel,
-        secondaryCtaLabel: draft.hero.secondaryCtaLabel,
-        clients: Array.isArray(draft.hero.clients) ? draft.hero.clients : splitLines(draft.hero.clients),
-        images: Array.isArray(draft.hero.images) ? draft.hero.images : splitLines(draft.hero.images),
+        badge: String(draft.hero?.badge ?? ""),
+        titleLine1: String(draft.hero?.titleLine1 ?? ""),
+        titleLine2: String(draft.hero?.titleLine2 ?? ""),
+        description: String(draft.hero?.description ?? ""),
+        primaryCtaLabel: String(draft.hero?.primaryCtaLabel ?? ""),
+        secondaryCtaLabel: String(draft.hero?.secondaryCtaLabel ?? ""),
+        clients: Array.isArray(draft.hero?.clients) ? draft.hero.clients.map(String).filter(Boolean) : splitLines(draft.hero?.clients),
+        images: Array.isArray(draft.hero?.images) ? draft.hero.images.map(String).filter(Boolean) : splitLines(draft.hero?.images),
       };
       const res = await fetch("/api/admin/hero", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.ok) {
         setHeroDbStatus({ state: "error", message: data?.error ?? "Gagal menyimpan." });
         return;
       }
+      
+      try {
+        new BroadcastChannel("ta_admin").postMessage({ type: "hero_saved" });
+      } catch {}
+      
       setHeroDbStatus({ state: "saved", message: "Tersimpan ke database." });
       window.setTimeout(() => setHeroDbStatus({ state: "idle", message: "" }), 2000);
     } catch {
@@ -1365,6 +1487,7 @@ export default function AdminPage() {
       } catch {
         return;
       }
+      incrementEditCount("about");
       setAboutDbStatus({ state: "saved", message: "Tersimpan ke database." });
       window.setTimeout(() => setAboutDbStatus({ state: "idle", message: "" }), 2000);
     } catch {
@@ -1408,6 +1531,7 @@ export default function AdminPage() {
       } catch {
         return;
       }
+      incrementEditCount("services");
       setServicesDbStatus({ state: "saved", message: "Tersimpan ke database." });
       window.setTimeout(() => setServicesDbStatus({ state: "idle", message: "" }), 2000);
     } catch {
@@ -1449,6 +1573,7 @@ export default function AdminPage() {
       } catch {
         return;
       }
+      incrementEditCount("gallery");
       setGalleryDbStatus({ state: "saved", message: "Tersimpan ke database." });
       window.setTimeout(() => setGalleryDbStatus({ state: "idle", message: "" }), 2000);
     } catch {
@@ -1486,6 +1611,7 @@ export default function AdminPage() {
       } catch {
         return;
       }
+      incrementEditCount("videoShowcase");
       setVideoShowcaseDbStatus({ state: "saved", message: "Tersimpan ke database." });
       window.setTimeout(() => setVideoShowcaseDbStatus({ state: "idle", message: "" }), 2000);
     } catch {
@@ -1835,14 +1961,54 @@ export default function AdminPage() {
                     }}
                   >
                     <div className="min-w-0">
-                      <div className="text-sm font-bold tracking-wide uppercase">Tentang Kami</div>
-                      <div className="mt-1 text-xs text-text-secondary">Edit paragraf deskripsi.</div>
-                    </div>
+                       <div className="text-sm font-bold tracking-wide uppercase">Tentang Kami</div>
+                       <div className="mt-1 text-xs text-text-secondary">
+                         {isSectionLocked("about") ? (
+                           <span className="text-amber-400 font-semibold">🔒 Terkunci — masukkan kode untuk mengedit</span>
+                         ) : (
+                           <><span>Edit paragraf deskripsi.</span> <span className="text-green-400 font-semibold">{MAX_FREE_EDITS - (sectionEditCounts.about ?? 0)}x sisa gratis</span></>
+                         )}
+                       </div>
+                     </div>
                     <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 text-text-secondary transition-transform group-open:rotate-180" fill="none">
                       <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </summary>
                   <div className="px-5 pb-5 pt-0">
+                    {isSectionLocked("about") ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3 p-4 rounded-2xl bg-amber-950/30 border border-amber-800/50">
+                          <div className="text-2xl">🔒</div>
+                          <div>
+                            <div className="text-sm font-bold text-amber-300">Section Terkunci</div>
+                            <div className="text-xs text-amber-500/80 mt-0.5">Batas edit gratis ({MAX_FREE_EDITS}x) telah tercapai. Masukkan kode akses untuk membuka kembali.</div>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-text-secondary uppercase tracking-widest mb-2">Kode Akses</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="password"
+                              value={sectionUnlockInput.about}
+                              onChange={(e) => setSectionUnlockInput((p) => ({ ...p, about: e.target.value }))}
+                              onKeyDown={(e) => { if (e.key === "Enter") handleUnlockSection("about"); }}
+                              placeholder="Masukkan kode rahasia..."
+                              className="flex-1 bg-surface border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-amber-500 transition-all"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleUnlockSection("about")}
+                              className="h-12 px-5 rounded-xl border border-amber-700 bg-amber-900/40 text-amber-300 text-sm font-bold hover:bg-amber-800/60 transition-colors shrink-0"
+                            >
+                              Buka
+                            </button>
+                          </div>
+                          {sectionUnlockError.about && (
+                            <div className="mt-2 text-xs text-red-400 font-semibold">❌ Kode salah. Coba lagi.</div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
                     <div className="grid grid-cols-1 gap-4">
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="text-xs text-text-secondary">
@@ -1985,6 +2151,7 @@ export default function AdminPage() {
                         </div>
                       </div>
                     </div>
+                    )}
                   </div>
                 </details>
 
@@ -2007,13 +2174,54 @@ export default function AdminPage() {
                   >
                     <div className="min-w-0">
                       <div className="text-sm font-bold tracking-wide uppercase">Solusi Kami</div>
-                      <div className="mt-1 text-xs text-text-secondary">Edit judul, CTA, dan list layanan.</div>
+                      <div className="mt-1 text-xs text-text-secondary">
+                        {isSectionLocked("services") ? (
+                          <span className="text-amber-400 font-semibold">🔒 Terkunci — masukkan kode untuk mengedit</span>
+                        ) : (
+                          <>Edit judul, CTA, dan list layanan. <span className="text-green-400 font-semibold">{MAX_FREE_EDITS - (sectionEditCounts.services ?? 0)}x sisa gratis</span></>
+                        )}
+                      </div>
                     </div>
                     <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 text-text-secondary transition-transform group-open:rotate-180" fill="none">
                       <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </summary>
                   <div className="px-5 pb-5 pt-0">
+                    {isSectionLocked("services") ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3 p-4 rounded-2xl bg-amber-950/30 border border-amber-800/50">
+                          <div className="text-2xl">🔒</div>
+                          <div>
+                            <div className="text-sm font-bold text-amber-300">Section Terkunci</div>
+                            <div className="text-xs text-amber-500/80 mt-0.5">Batas edit gratis ({MAX_FREE_EDITS}x) telah tercapai. Masukkan kode akses untuk membuka kembali.</div>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-text-secondary uppercase tracking-widest mb-2">Kode Akses</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="password"
+                              value={sectionUnlockInput.services}
+                              onChange={(e) => setSectionUnlockInput((p) => ({ ...p, services: e.target.value }))}
+                              onKeyDown={(e) => { if (e.key === "Enter") handleUnlockSection("services"); }}
+                              placeholder="Masukkan kode rahasia..."
+                              className="flex-1 bg-surface border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-amber-500 transition-all"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleUnlockSection("services")}
+                              className="h-12 px-5 rounded-xl border border-amber-700 bg-amber-900/40 text-amber-300 text-sm font-bold hover:bg-amber-800/60 transition-colors shrink-0"
+                            >
+                              Buka
+                            </button>
+                          </div>
+                          {sectionUnlockError.services && (
+                            <div className="mt-2 text-xs text-red-400 font-semibold">❌ Kode salah. Coba lagi.</div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                    <>
                     <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                       <div className="text-xs text-text-secondary">
                         {servicesDbStatus.state === "loading"
@@ -2210,6 +2418,8 @@ export default function AdminPage() {
                         )}
                       </div>
                     </div>
+                    </>
+                    )}
                   </div>
                 </details>
 
@@ -2232,13 +2442,54 @@ export default function AdminPage() {
                   >
                     <div className="min-w-0">
                       <div className="text-sm font-bold tracking-wide uppercase">Gallery</div>
-                      <div className="mt-1 text-xs text-text-secondary">Atur judul, label kecil, dan item galeri.</div>
+                      <div className="mt-1 text-xs text-text-secondary">
+                        {isSectionLocked("gallery") ? (
+                          <span className="text-amber-400 font-semibold">🔒 Terkunci — masukkan kode untuk mengedit</span>
+                        ) : (
+                          <><span>Atur judul, label kecil, dan item galeri.</span> <span className="text-green-400 font-semibold">{MAX_FREE_EDITS - (sectionEditCounts.gallery ?? 0)}x sisa gratis</span></>
+                        )}
+                      </div>
                     </div>
                     <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 text-text-secondary transition-transform group-open:rotate-180" fill="none">
                       <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </summary>
                   <div className="px-5 pb-5 pt-0">
+                    {isSectionLocked("gallery") ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3 p-4 rounded-2xl bg-amber-950/30 border border-amber-800/50">
+                          <div className="text-2xl">🔒</div>
+                          <div>
+                            <div className="text-sm font-bold text-amber-300">Section Terkunci</div>
+                            <div className="text-xs text-amber-500/80 mt-0.5">Batas edit gratis ({MAX_FREE_EDITS}x) telah tercapai. Masukkan kode akses untuk membuka kembali.</div>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-text-secondary uppercase tracking-widest mb-2">Kode Akses</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="password"
+                              value={sectionUnlockInput.gallery}
+                              onChange={(e) => setSectionUnlockInput((p) => ({ ...p, gallery: e.target.value }))}
+                              onKeyDown={(e) => { if (e.key === "Enter") handleUnlockSection("gallery"); }}
+                              placeholder="Masukkan kode rahasia..."
+                              className="flex-1 bg-surface border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-amber-500 transition-all"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleUnlockSection("gallery")}
+                              className="h-12 px-5 rounded-xl border border-amber-700 bg-amber-900/40 text-amber-300 text-sm font-bold hover:bg-amber-800/60 transition-colors shrink-0"
+                            >
+                              Buka
+                            </button>
+                          </div>
+                          {sectionUnlockError.gallery && (
+                            <div className="mt-2 text-xs text-red-400 font-semibold">❌ Kode salah. Coba lagi.</div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                    <>
                     <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                       <div className="text-xs text-text-secondary">
                         {galleryDbStatus.state === "loading"
@@ -2402,6 +2653,8 @@ export default function AdminPage() {
                       ))}
                     </div>
                   </div>
+                  </>
+                  )}
                   </div>
                 </details>
 
@@ -2424,13 +2677,54 @@ export default function AdminPage() {
                   >
                     <div className="min-w-0">
                       <div className="text-sm font-bold tracking-wide uppercase">Video Showcase</div>
-                      <div className="mt-1 text-xs text-text-secondary">Atur judul, deskripsi, kategori, dan foto.</div>
+                      <div className="mt-1 text-xs text-text-secondary">
+                        {isSectionLocked("videoShowcase") ? (
+                          <span className="text-amber-400 font-semibold">🔒 Terkunci — masukkan kode untuk mengedit</span>
+                        ) : (
+                          <><span>Atur judul, deskripsi, kategori, dan foto.</span> <span className="text-green-400 font-semibold">{MAX_FREE_EDITS - (sectionEditCounts.videoShowcase ?? 0)}x sisa gratis</span></>
+                        )}
+                      </div>
                     </div>
                     <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 text-text-secondary transition-transform group-open:rotate-180" fill="none">
                       <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </summary>
                   <div className="px-5 pb-5 pt-0">
+                    {isSectionLocked("videoShowcase") ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3 p-4 rounded-2xl bg-amber-950/30 border border-amber-800/50">
+                          <div className="text-2xl">🔒</div>
+                          <div>
+                            <div className="text-sm font-bold text-amber-300">Section Terkunci</div>
+                            <div className="text-xs text-amber-500/80 mt-0.5">Batas edit gratis ({MAX_FREE_EDITS}x) telah tercapai. Masukkan kode akses untuk membuka kembali.</div>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-text-secondary uppercase tracking-widest mb-2">Kode Akses</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="password"
+                              value={sectionUnlockInput.videoShowcase}
+                              onChange={(e) => setSectionUnlockInput((p) => ({ ...p, videoShowcase: e.target.value }))}
+                              onKeyDown={(e) => { if (e.key === "Enter") handleUnlockSection("videoShowcase"); }}
+                              placeholder="Masukkan kode rahasia..."
+                              className="flex-1 bg-surface border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-amber-500 transition-all"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleUnlockSection("videoShowcase")}
+                              className="h-12 px-5 rounded-xl border border-amber-700 bg-amber-900/40 text-amber-300 text-sm font-bold hover:bg-amber-800/60 transition-colors shrink-0"
+                            >
+                              Buka
+                            </button>
+                          </div>
+                          {sectionUnlockError.videoShowcase && (
+                            <div className="mt-2 text-xs text-red-400 font-semibold">❌ Kode salah. Coba lagi.</div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                    <>
                     <div className="grid grid-cols-1 gap-4">
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="text-xs text-text-secondary">
@@ -2578,7 +2872,9 @@ export default function AdminPage() {
                         )
                       )}
                     </div>
-                  </div>
+                    </div>
+                    </>
+                    )}
                   </div>
                 </details>
 
@@ -2726,7 +3022,7 @@ export default function AdminPage() {
                                   }
                                   className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-text-secondary transition-all"
                                   type="text"
-                                  placeholder='contoh: 50% 20%'
+                                  placeholder="contoh: 50% 20%"
                                 />
                               </div>
                             </div>
