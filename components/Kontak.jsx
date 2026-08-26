@@ -6,50 +6,48 @@ import { Mail, Phone, Instagram, Send, Loader2, CheckCircle } from "lucide-react
 import { WHATSAPP_LINK } from "@/lib/whatsapp";
 
 export default function Kontak() {
-  const [formState, setFormState] = useState("idle"); // idle, loading, success, error
+  // idle | loading | success | error
+  const [formState, setFormState] = useState("idle");
 
-  const FORM_ACCESS_KEY = "307d894a-b4fd-4227-8158-db348d8511df";
   const handleSubmit = async (e) => {
     e.preventDefault();
     setFormState("loading");
 
     try {
       const formData = new FormData(e.target);
-      formData.append("access_key", FORM_ACCESS_KEY);
-
-      // Beberapa konfigurasi Web3Forms mengandalkan field bernama "email".
-      // Karena input kita label-nya "Email / WhatsApp", kita copy nilainya ke "email" juga.
-      const emailOrWa = formData.get("email_whatsapp");
-      if (emailOrWa) {
-        formData.set("email", String(emailOrWa));
-      }
-
-      const response = await fetch("https://api.web3forms.com/submit", {
+      // Pengiriman diproses lewat API route sendiri (lihat app/api/kontak/route.js).
+      // JANGAN diubah kembali menjadi fetch langsung ke web3forms — Windows Defender
+      // akan mengkarantina file ini (false positive Trojan:HTML/FakeLogin).
+      const res = await fetch("/api/kontak", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: String(formData.get("name") ?? ""),
+          email_whatsapp: String(formData.get("email_whatsapp") ?? ""),
+          message: String(formData.get("message") ?? ""),
+        }),
       });
 
-      const data = await response.json();
+      const data = await res.json().catch(() => null);
 
-      if (data?.success) {
+      if (data?.ok) {
         setFormState("success");
         e.target.reset();
-        setTimeout(() => setFormState("idle"), 3000);
       } else {
         setFormState("error");
-        setTimeout(() => setFormState("idle"), 3000);
       }
-    } catch (err) {
+    } catch {
       setFormState("error");
-      setTimeout(() => setFormState("idle"), 3000);
     }
+
+    setTimeout(() => setFormState("idle"), 3000);
   };
 
   return (
     <section id="kontak" className="py-32 bg-background relative overflow-hidden border-t border-border/50">
       <div className="container mx-auto px-6 lg:px-8 max-w-6xl relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-          {/* Left Column: Info */}
+          {/* Kolom kiri: info kontak */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -116,7 +114,7 @@ export default function Kontak() {
             </div>
           </motion.div>
 
-          {/* Right Column: Form */}
+          {/* Kolom kanan: form kontak */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -125,7 +123,7 @@ export default function Kontak() {
           >
             <div className="bg-surface rounded-[2rem] p-8 md:p-12 border border-border">
               {formState === "success" ? (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   className="flex flex-col items-center justify-center py-16 text-center"
@@ -151,32 +149,32 @@ export default function Kontak() {
                   ) : null}
                   <div>
                     <label htmlFor="name" className="block text-xs font-semibold text-text-secondary uppercase tracking-widest mb-3">Nama Lengkap</label>
-                    <input 
-                      type="text" 
-                      id="name" 
+                    <input
+                      type="text"
+                      id="name"
                       name="name"
                       required
                       className="w-full bg-background border border-border rounded-xl px-5 py-4 text-foreground focus:outline-none focus:border-text-secondary transition-all"
                       placeholder="John Doe"
                     />
                   </div>
-                  
+
                   <div>
                     <label htmlFor="contact" className="block text-xs font-semibold text-text-secondary uppercase tracking-widest mb-3">Email / WhatsApp</label>
-                    <input 
-                      type="text" 
-                      id="contact" 
+                    <input
+                      type="text"
+                      id="contact"
                       name="email_whatsapp"
                       required
                       className="w-full bg-background border border-border rounded-xl px-5 py-4 text-foreground focus:outline-none focus:border-text-secondary transition-all"
                       placeholder="john@example.com"
                     />
                   </div>
-                  
+
                   <div>
                     <label htmlFor="message" className="block text-xs font-semibold text-text-secondary uppercase tracking-widest mb-3">Kebutuhan / Pesan</label>
-                    <textarea 
-                      id="message" 
+                    <textarea
+                      id="message"
                       name="message"
                       required
                       rows={5}
@@ -184,9 +182,9 @@ export default function Kontak() {
                       placeholder="Ceritakan detail kebutuhan event Anda..."
                     ></textarea>
                   </div>
-                  
-                  <button 
-                    type="submit" 
+
+                  <button
+                    type="submit"
                     disabled={formState === "loading"}
                     className="w-full bg-foreground text-background font-bold rounded-xl px-4 py-5 flex items-center justify-center gap-3 hover:bg-gray-200 transition-all disabled:opacity-70 disabled:cursor-not-allowed mt-4"
                   >

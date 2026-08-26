@@ -17,7 +17,7 @@ export default function Footer() {
     if (pathname === "/") {
       const el = document.getElementById(sectionId);
       if (el) {
-        window.scrollTo({ top: el.offsetTop, behavior: "smooth" });
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
         if (window.history.replaceState) {
           window.history.replaceState(null, "", window.location.pathname);
         }

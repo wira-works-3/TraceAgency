@@ -6,6 +6,9 @@ import { articlesData } from "@/data/articles";
 import { WHATSAPP_LINK } from "@/lib/whatsapp";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 function formatDateId(date) {
   if (!date) return "";
   const d = new Date(date);
@@ -33,6 +36,7 @@ async function getArticleById(id) {
       return null;
     }
   }
+  if (process.env.NODE_ENV === "production") return null;
   return articlesData.find((item) => item.id === id) ?? null;
 }
 
@@ -61,6 +65,7 @@ export async function generateMetadata({ params }) {
       description: article.excerpt,
       url: `/artikel/${article.id}`,
       type: "article",
+      siteName: "Jasa Sewa SPG",
       images: article.image ? [{ url: article.image }] : undefined,
     },
   };
@@ -145,7 +150,10 @@ export default async function ArticleDetail({ params }) {
                 if (!excerptText) return null;
                 if (introText && introText === excerptText) return null;
                 return (
-                  <p key="excerpt" className="text-xl md:text-2xl text-foreground font-medium leading-relaxed">
+                  <p
+                    key="excerpt"
+                    className="text-xl md:text-2xl text-foreground font-medium leading-relaxed whitespace-pre-line"
+                  >
                     {excerptText}
                   </p>
                 );
@@ -155,7 +163,10 @@ export default async function ArticleDetail({ params }) {
                 const intro = String(article.content?.intro ?? "").trim();
                 if (!intro) return null;
                 return (
-                  <p key="intro" className="text-xl md:text-2xl text-foreground font-medium leading-relaxed">
+                  <p
+                    key="intro"
+                    className="text-xl md:text-2xl text-foreground font-medium leading-relaxed whitespace-pre-line"
+                  >
                     {intro}
                   </p>
                 );

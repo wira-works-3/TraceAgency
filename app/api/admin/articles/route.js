@@ -43,6 +43,23 @@ function coerceDate(value) {
   return d;
 }
 
+function isNumericString(value) {
+  return /^[0-9]+$/.test(String(value ?? "").trim());
+}
+
+async function getNextNumericArticleId() {
+  const rows = await prisma.article.findMany({ select: { id: true } });
+  let max = 0;
+  for (const row of rows) {
+    const id = String(row?.id ?? "").trim();
+    if (!isNumericString(id)) continue;
+    const n = Number(id);
+    if (!Number.isFinite(n)) continue;
+    if (n > max) max = n;
+  }
+  return String(max + 1);
+}
+
 export async function GET(request) {
   if (!isAuthorized(request)) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
@@ -61,9 +78,15 @@ export async function GET(request) {
 
   try {
     const rows = await prisma.article.findMany({ orderBy: { date: "desc" } });
-    return NextResponse.json({ ok: true, articles: rows.map(normalizeArticle) });
+    return NextResponse.json(
+      { ok: true, articles: rows.map(normalizeArticle) },
+      { headers: { "Cache-Control": "no-store" } }
+    );
   } catch {
-    return NextResponse.json({ ok: true, articles: [] });
+    return NextResponse.json(
+      { ok: true, articles: [] },
+      { headers: { "Cache-Control": "no-store" } }
+    );
   }
 }
 
@@ -90,7 +113,6 @@ export async function POST(request) {
     return NextResponse.json({ ok: false, error: "Body tidak valid." }, { status: 400 });
   }
 
-  const id = String(body?.id ?? "").trim();
   const title = String(body?.title ?? "").trim();
   const excerpt = String(body?.excerpt ?? "").trim();
   const image = String(body?.image ?? "").trim();
@@ -99,22 +121,35 @@ export async function POST(request) {
   const content = body?.content ?? null;
   const date = coerceDate(body?.date) ?? new Date();
 
-  if (!id || !title || !excerpt || !image || !category) {
+  if (!title || !excerpt || !image || !category) {
     return NextResponse.json(
-      { ok: false, error: "Field wajib: id, title, excerpt, image, category." },
+      { ok: false, error: "Field wajib: title, excerpt, image, category." },
       { status: 400 }
     );
   }
 
   try {
-    const created = await prisma.article.create({
-      data: { id, title, excerpt, content, date, image, category, objectPosition },
-    });
-    return NextResponse.json({ ok: true, article: normalizeArticle(created) });
+    const id = await getNextNumericArticleId();
+    try {
+      const created = await prisma.article.create({
+        data: { id, title, excerpt, content, date, image, category, objectPosition },
+      });
+      return NextResponse.json({ ok: true, article: normalizeArticle(created) });
+    } catch (e) {
+      const msg = String(e?.message ?? "").toLowerCase();
+      if (msg.includes("unique") || msg.includes("duplicate")) {
+        const retryId = await getNextNumericArticleId();
+        const created = await prisma.article.create({
+          data: { id: retryId, title, excerpt, content, date, image, category, objectPosition },
+        });
+        return NextResponse.json({ ok: true, article: normalizeArticle(created) });
+      }
+      throw e;
+    }
   } catch (e) {
     const msg = String(e?.message ?? "").toLowerCase();
     if (msg.includes("unique") || msg.includes("duplicate")) {
-      return NextResponse.json({ ok: false, error: "ID artikel sudah dipakai." }, { status: 409 });
+      return NextResponse.json({ ok: false, error: "ID artikel bentrok, coba simpan ulang." }, { status: 409 });
     }
     return NextResponse.json({ ok: false, error: "Gagal membuat artikel." }, { status: 500 });
   }

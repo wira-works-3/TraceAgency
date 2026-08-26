@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import fs from "node:fs/promises";
+import path from "node:path";
 
 const COOKIE_NAME = "ta_admin_session";
 
@@ -41,6 +43,64 @@ function coerceDate(value) {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return null;
   return d;
+}
+
+function getUploadDir() {
+  const configured = process.env.UPLOAD_DIR ? String(process.env.UPLOAD_DIR) : "";
+  if (configured.trim()) return configured;
+  return path.join(process.cwd(), "public", "uploads");
+}
+
+function getUrlPrefix() {
+  const configured = process.env.UPLOAD_URL_PREFIX ? String(process.env.UPLOAD_URL_PREFIX) : "";
+  return configured.trim() || "/uploads";
+}
+
+function safeBasename(value) {
+  const base = path.basename(String(value ?? ""));
+  return base.replace(/[^a-zA-Z0-9._-]/g, "_");
+}
+
+function normalizeUploadUrl(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+  if (raw.startsWith("/")) return raw;
+  if (raw.startsWith("http://") || raw.startsWith("https://")) {
+    try {
+      return new URL(raw).pathname || "";
+    } catch {
+      return "";
+    }
+  }
+  return "";
+}
+
+async function deleteUploadedFileByUrl(url) {
+  const normalizedUrl = normalizeUploadUrl(url);
+  if (!normalizedUrl) return { attempted: false, deleted: false, reason: "empty" };
+  const urlPrefix = getUrlPrefix();
+  const normalizedPrefix = urlPrefix.endsWith("/") ? urlPrefix : `${urlPrefix}/`;
+  if (!normalizedUrl.startsWith(normalizedPrefix)) return { attempted: false, deleted: false, reason: "not_upload" };
+
+  const fileName = safeBasename(normalizedUrl.slice(normalizedPrefix.length));
+  if (!fileName) return { attempted: true, deleted: false, reason: "invalid_filename" };
+
+  const uploadDir = getUploadDir();
+  const resolvedDir = path.resolve(uploadDir);
+  const resolvedFile = path.resolve(path.join(uploadDir, fileName));
+  if (!resolvedFile.startsWith(resolvedDir + path.sep) && resolvedFile !== resolvedDir) {
+    return { attempted: true, deleted: false, reason: "path_outside_upload_dir" };
+  }
+
+  try {
+    await fs.unlink(resolvedFile);
+    return { attempted: true, deleted: true, reason: "deleted" };
+  } catch (e) {
+    const code = String(e?.code ?? "");
+    if (code === "ENOENT") return { attempted: true, deleted: true, reason: "not_found" };
+    if (code === "EACCES" || code === "EPERM") return { attempted: true, deleted: false, reason: "permission_denied" };
+    return { attempted: true, deleted: false, reason: code || "unlink_failed" };
+  }
 }
 
 export async function GET(request, { params }) {
@@ -135,8 +195,18 @@ export async function DELETE(request, { params }) {
   if (!id) return NextResponse.json({ ok: false, error: "ID tidak valid." }, { status: 400 });
 
   try {
+    const row = await prisma.article.findUnique({ where: { id }, select: { image: true } });
     await prisma.article.delete({ where: { id } });
-    return NextResponse.json({ ok: true });
+    const result = await deleteUploadedFileByUrl(row?.image);
+    return NextResponse.json({
+      ok: true,
+      file: {
+        attempted: Boolean(result?.attempted),
+        deleted: Boolean(result?.deleted),
+        reason: String(result?.reason ?? ""),
+        url: String(row?.image ?? ""),
+      },
+    });
   } catch (e) {
     const msg = String(e?.message ?? "").toLowerCase();
     if (msg.includes("record") && msg.includes("not found")) {

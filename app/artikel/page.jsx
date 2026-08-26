@@ -5,6 +5,9 @@ import { ArrowLeft } from "lucide-react";
 import { articlesData } from "@/data/articles";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 function formatDateId(date) {
   if (!date) return "";
   const d = new Date(date);
@@ -28,9 +31,11 @@ async function getArticles() {
         }));
       }
     } catch {
+      if (process.env.NODE_ENV === "production") return [];
       return articlesData;
     }
   }
+  if (process.env.NODE_ENV === "production") return [];
   return articlesData;
 }
 
@@ -42,10 +47,11 @@ export const metadata = {
     canonical: "/artikel",
   },
   openGraph: {
-    title: "Artikel Agency SPG | Trace Agency",
+    title: "Artikel Agency SPG | Jasa Sewa SPG",
     description:
       "Kumpulan artikel Trace Agency seputar layanan SPG, SPB, Usher, dan kebutuhan talent event profesional.",
     url: "/artikel",
+    siteName: "Jasa Sewa SPG",
   },
 };
 

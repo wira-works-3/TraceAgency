@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { galleryData } from "@/data/gallery";
+import { toast } from "sonner";
 
 const STORAGE_KEY = "traceagency_admin_draft_v1";
 const MAX_FREE_EDITS = 5;
@@ -247,14 +248,72 @@ export default function AdminPage() {
     contentOrder: ["excerpt", "intro", "servicesTitle", "services", "reasonsTitle", "reasons", "cta", "whatsappLabel"],
   });
 
-  const slugify = useCallback((value) => {
-    return String(value ?? "")
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 80);
-  }, []);
+  const toastLastKeyRef = useRef({});
+
+  useEffect(() => {
+    const prev = toastLastKeyRef.current;
+    const items = [
+      { key: "hero_db", label: "Hero", status: heroDbStatus },
+      { key: "hero_upload", label: "Upload Hero", status: heroUploadStatus },
+      { key: "about_db", label: "About", status: aboutDbStatus },
+      { key: "services_db", label: "Services", status: servicesDbStatus },
+      { key: "services_upload", label: "Upload Services", status: servicesUploadStatus, extraKey: servicesUploadStatus?.serviceIdx },
+      { key: "gallery_db", label: "Gallery", status: galleryDbStatus },
+      { key: "gallery_upload", label: "Upload Gallery", status: galleryUploadStatus, extraKey: galleryUploadStatus?.itemIdx },
+      { key: "video_db", label: "Video Showcase", status: videoShowcaseDbStatus },
+      { key: "video_upload", label: "Upload Video Showcase", status: videoShowcaseUploadStatus, extraKey: videoShowcaseUploadStatus?.categoryIdx },
+      { key: "articles_db", label: "Artikel", status: articlesDbStatus },
+      { key: "article_upload", label: "Upload Artikel", status: articleUploadStatus },
+    ];
+
+    for (const item of items) {
+      const state = String(item.status?.state ?? "idle");
+      const message = String(item.status?.message ?? "").trim();
+      const extra = item.extraKey == null ? "" : String(item.extraKey);
+      const prevEntry = prev[item.key];
+      const prevRef = prevEntry?.ref;
+      const prevExtra = prevEntry?.extra;
+      if (prevRef === item.status && prevExtra === extra) continue;
+      prev[item.key] = { ref: item.status, extra };
+
+      if (state === "error") {
+        toast.error(message || `${item.label} gagal.`);
+      } else if (state === "saved") {
+        toast.success(message || `${item.label} berhasil.`);
+      }
+    }
+  }, [
+    aboutDbStatus,
+    articleUploadStatus,
+    articlesDbStatus,
+    galleryDbStatus,
+    galleryUploadStatus,
+    heroDbStatus,
+    heroUploadStatus,
+    servicesDbStatus,
+    servicesUploadStatus,
+    videoShowcaseDbStatus,
+    videoShowcaseUploadStatus,
+  ]);
+
+  const nextArticleNumericId = useMemo(() => {
+    let max = 0;
+    for (const row of articles) {
+      const id = String(row?.id ?? "").trim();
+      if (!/^[0-9]+$/.test(id)) continue;
+      const n = Number(id);
+      if (!Number.isFinite(n)) continue;
+      if (n > max) max = n;
+    }
+    return String(max + 1);
+  }, [articles]);
+
+  useEffect(() => {
+    if (articleMode !== "create") return;
+    const currentId = String(articleForm.id ?? "").trim();
+    if (currentId === nextArticleNumericId) return;
+    setArticleForm((c) => ({ ...c, id: nextArticleNumericId }));
+  }, [articleForm.id, articleMode, nextArticleNumericId]);
 
   const normalizeArticleBlockOrder = useCallback(
     (value) => {
@@ -686,13 +745,15 @@ export default function AdminPage() {
     };
     const content = contentObj;
 
-    if (!id || !title || !excerpt || !image || !category) {
-      setArticlesDbStatus({ state: "error", message: "Field wajib: id, title, excerpt, image, category." });
+    const isCreate = articleMode === "create";
+    const targetId = isCreate ? "" : (originalId || id);
+
+    if (!title || !excerpt || !image || !category || (!isCreate && !targetId)) {
+      setArticlesDbStatus({ state: "error", message: "Field wajib: title, excerpt, image, category." });
       return;
     }
 
     const payload = {
-      id,
       title,
       excerpt,
       image,
@@ -703,52 +764,34 @@ export default function AdminPage() {
     };
 
     try {
-      const isCreate = articleMode === "create";
-      const isRename = !isCreate && originalId && originalId !== id;
-
-      if (isRename) {
-        const createRes = await fetch("/api/admin/articles", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        const createData = await createRes.json().catch(() => null);
-        if (!createRes.ok || !createData?.ok) {
-          setArticlesDbStatus({ state: "error", message: createData?.error ?? "Gagal menyimpan artikel." });
-          return;
+      const url = isCreate ? "/api/admin/articles" : `/api/admin/articles/${encodeURIComponent(targetId)}`;
+      const method = isCreate ? "POST" : "PUT";
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
+        setArticlesDbStatus({ state: "error", message: data?.error ?? "Gagal menyimpan artikel." });
+        return;
+      }
+      if (isCreate) {
+        const newId = String(data?.article?.id ?? "").trim();
+        if (newId) {
+          setArticleForm((c) => ({ ...c, id: newId, originalId: newId }));
         }
-
-        const delRes = await fetch(`/api/admin/articles/${encodeURIComponent(originalId)}`, { method: "DELETE" });
-        const delData = await delRes.json().catch(() => null);
-        if (!delRes.ok || !delData?.ok) {
-          setArticlesDbStatus({
-            state: "error",
-            message: delData?.error ?? "Artikel tersimpan, tapi gagal hapus ID lama.",
-          });
-          await loadArticles();
-          return;
-        }
-        setArticleForm((c) => ({ ...c, originalId: id }));
       } else {
-        const url = isCreate ? "/api/admin/articles" : `/api/admin/articles/${encodeURIComponent(id)}`;
-        const method = isCreate ? "POST" : "PUT";
-        const res = await fetch(url, {
-          method,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        const data = await res.json().catch(() => null);
-        if (!res.ok || !data?.ok) {
-          setArticlesDbStatus({ state: "error", message: data?.error ?? "Gagal menyimpan artikel." });
-          return;
-        }
-        if (!isCreate) {
-          setArticleForm((c) => ({ ...c, originalId: id }));
-        }
+        setArticleForm((c) => ({ ...c, originalId: targetId }));
       }
 
       await loadArticles();
       incrementEditCount("articles");
+      try {
+        new BroadcastChannel("ta_admin").postMessage({ type: "articles_saved" });
+      } catch {
+        return;
+      }
       setArticlesDbStatus({ state: "saved", message: "Artikel tersimpan." });
       window.setTimeout(() => setArticlesDbStatus({ state: "idle", message: "" }), 2000);
       if (isCreate) resetArticleForm();
@@ -769,7 +812,18 @@ export default function AdminPage() {
           setArticlesDbStatus({ state: "error", message: data?.error ?? "Gagal menghapus artikel." });
           return;
         }
+        const fileInfo = data?.file;
+        if (fileInfo && fileInfo.attempted && !fileInfo.deleted) {
+          toast.warning(
+            `Artikel terhapus, tapi file upload gagal dihapus (${String(fileInfo.reason || "unknown")}).`
+          );
+        }
         await loadArticles();
+        try {
+          new BroadcastChannel("ta_admin").postMessage({ type: "articles_saved" });
+        } catch {
+          return;
+        }
         setArticlesDbStatus({ state: "saved", message: "Artikel dihapus." });
         window.setTimeout(() => setArticlesDbStatus({ state: "idle", message: "" }), 2000);
         if (articleMode === "edit" && articleForm.id === id) {
@@ -2951,18 +3005,12 @@ export default function AdminPage() {
                                 </label>
                                 <input
                                   value={articleForm.id}
-                                  onChange={(e) =>
-                                    setArticleForm((c) => ({ ...c, id: slugify(e.target.value) }))
-                                  }
-                                  className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-text-secondary transition-all"
+                                  readOnly
+                                  disabled
+                                  className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-foreground opacity-80 cursor-not-allowed"
                                   type="text"
-                                  placeholder="contoh: jakarta"
+                                  placeholder="Otomatis"
                                 />
-                                {articleMode === "edit" && articleForm.originalId && articleForm.originalId !== articleForm.id ? (
-                                  <div className="mt-2 text-xs text-text-secondary">
-                                    ID lama: <span className="font-semibold">{articleForm.originalId}</span> (akan dipindahkan saat simpan)
-                                  </div>
-                                ) : null}
                               </div>
 
                               <div>
@@ -2984,16 +3032,7 @@ export default function AdminPage() {
                               </label>
                               <input
                                 value={articleForm.title}
-                                onChange={(e) =>
-                                  setArticleForm((c) => {
-                                    const nextTitle = e.target.value;
-                                    const next = { ...c, title: nextTitle };
-                                    if (articleMode === "create" && !String(c.id || "").trim()) {
-                                      next.id = slugify(nextTitle);
-                                    }
-                                    return next;
-                                  })
-                                }
+                                onChange={(e) => setArticleForm((c) => ({ ...c, title: e.target.value }))}
                                 className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-text-secondary transition-all"
                                 type="text"
                               />

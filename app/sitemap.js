@@ -1,7 +1,7 @@
 import { articlesData } from "@/data/articles";
 
 export default function sitemap() {
-  const baseUrl = "https://traceagency.com";
+  const baseUrl = "https://sewaspg.com";
   const articlePages = articlesData.map((article) => ({
     url: `${baseUrl}/artikel/${article.id}`,
     lastModified: new Date(),

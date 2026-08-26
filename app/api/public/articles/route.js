@@ -22,14 +22,23 @@ function normalizeArticle(row) {
 
 export async function GET() {
   if (!prisma.article) {
-    return NextResponse.json({ ok: true, articles: [] });
+    return NextResponse.json(
+      { ok: true, articles: [] },
+      { headers: { "Cache-Control": "no-store" } }
+    );
   }
 
   try {
     const rows = await prisma.article.findMany({ orderBy: { date: "desc" } });
     const articles = rows.map(normalizeArticle);
-    return NextResponse.json({ ok: true, articles });
+    return NextResponse.json(
+      { ok: true, articles },
+      { headers: { "Cache-Control": "no-store" } }
+    );
   } catch {
-    return NextResponse.json({ ok: true, articles: [] });
+    return NextResponse.json(
+      { ok: true, articles: [] },
+      { headers: { "Cache-Control": "no-store" } }
+    );
   }
 }

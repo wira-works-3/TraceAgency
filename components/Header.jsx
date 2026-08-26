@@ -28,18 +28,15 @@ export default function Header() {
     if (href.startsWith('/#')) {
       e.preventDefault();
       setIsMobileMenuOpen(false);
-      
+
       const targetId = href.replace('/#', '');
-      
+
       if (pathname === '/') {
         // Jika sedang di halaman Home, lakukan smooth scroll
         const element = document.getElementById(targetId);
         if (element) {
-          window.scrollTo({
-            top: element.offsetTop,
-            behavior: 'smooth'
-          });
-          
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
           if (window.history.replaceState) {
             window.history.replaceState(null, '', window.location.pathname);
           }

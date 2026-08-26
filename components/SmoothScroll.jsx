@@ -1,42 +1,22 @@
 "use client";
 
-import { useEffect } from "react";
-import Lenis from "lenis";
+import { useLayoutEffect } from "react";
 import { usePathname } from "next/navigation";
 
 export default function SmoothScroll({ children }) {
   const pathname = usePathname();
 
-  useEffect(() => {
-    const lenis = new Lenis({
-      duration: 1.2,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      direction: "vertical",
-      gestureDirection: "vertical",
-      smooth: true,
-      mouseMultiplier: 1,
-      smoothTouch: false,
-      touchMultiplier: 2,
-      infinite: false,
-    });
-
-    function raf(time) {
-      lenis.raf(time);
-      requestAnimationFrame(raf);
+  useLayoutEffect(() => {
+    const hash = typeof window !== "undefined" ? window.location.hash : "";
+    if (hash) {
+      const target = document.querySelector(hash);
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
     }
-
-    requestAnimationFrame(raf);
-
-    // Memaksa scroll ke atas secara instan saat rute/path berubah
-    // lenis.scrollTo(0, { immediate: true }) sangat penting agar Lenis tidak menyimpan
-    // posisi scroll dari halaman sebelumnya
-    lenis.scrollTo(0, { immediate: true });
-    window.scrollTo(0, 0);
-
-    return () => {
-      lenis.destroy();
-    };
-  }, [pathname]); // Akan terpicu ulang setiap kali URL/pathname berubah
+    window.scrollTo({ top: 0, left: 0 });
+  }, [pathname]);
 
   return <>{children}</>;
 }

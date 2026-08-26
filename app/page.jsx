@@ -9,17 +9,18 @@ import Kontak from "@/components/Kontak";
 import Footer from "@/components/Footer";
 
 export const metadata = {
-  title: "Agency SPG, SPB, Usher, MC Profesional",
+  title: "Jasa Sewa SPG, Usher, MC Profesional",
   description:
-    "Trace Agency membantu kebutuhan talent event profesional: SPG, SPB, Usher, MC, hingga Brand Ambassador untuk event dan promosi di berbagai kota.",
+    "Trace Agency, jasa sewa SPG, SPB, Usher, MC, hingga Brand Ambassador profesional untuk event dan promosi brand di berbagai kota.",
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "Trace Agency | Agency SPG, SPB, Usher, MC Profesional",
+    title: "Jasa Sewa SPG, Usher, MC Profesional",
     description:
-      "Konsultasi kebutuhan talent event Anda bersama Trace Agency untuk hasil promosi yang lebih maksimal.",
+      "Konsultasi kebutuhan sewa SPG, Usher, dan talent event Anda bersama Trace Agency untuk hasil promosi yang lebih maksimal.",
     url: "/",
+    siteName: "Jasa Sewa SPG",
   },
 };
 

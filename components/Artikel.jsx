@@ -4,26 +4,50 @@ import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { featuredArticle, sidebarArticles } from "@/data/articles";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export default function Artikel() {
   const [articles, setArticles] = useState(null);
+  const isProd = process.env.NODE_ENV === "production";
+  const cancelledRef = useRef(false);
+
+  const fetchArticles = useCallback(async () => {
+    try {
+      const r = await fetch("/api/public/articles", { cache: "no-store" });
+      const data = await r.json().catch(() => null);
+      if (cancelledRef.current) return;
+      if (!data?.ok || !Array.isArray(data.articles)) return;
+      setArticles(data.articles);
+    } catch {
+      return;
+    }
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    fetch("/api/public/articles")
-      .then((r) => r.json())
-      .then((data) => {
-        if (cancelled) return;
-        if (!data?.ok || !Array.isArray(data.articles)) return;
-        setArticles(data.articles);
-      })
-      .catch(() => {});
-
+    cancelledRef.current = false;
+    const t = window.setTimeout(() => {
+      fetchArticles();
+    }, 0);
     return () => {
-      cancelled = true;
+      window.clearTimeout(t);
+      cancelledRef.current = true;
     };
-  }, []);
+  }, [fetchArticles]);
+
+  useEffect(() => {
+    const ch = typeof window !== "undefined" ? new BroadcastChannel("ta_admin") : null;
+    if (!ch) return;
+    const onMessage = (event) => {
+      const data = event?.data;
+      if (!data || data.type !== "articles_saved") return;
+      fetchArticles();
+    };
+    ch.addEventListener("message", onMessage);
+    return () => {
+      ch.removeEventListener("message", onMessage);
+      ch.close();
+    };
+  }, [fetchArticles]);
 
   const derived = useMemo(() => {
     if (Array.isArray(articles) && articles.length) {
@@ -33,8 +57,9 @@ export default function Artikel() {
         sidebar: list.slice(1, 4),
       };
     }
+    if (isProd) return { featured: null, sidebar: [] };
     return { featured: featuredArticle, sidebar: sidebarArticles };
-  }, [articles]);
+  }, [articles, isProd]);
 
   const featured = derived.featured;
   const sidebar = derived.sidebar;

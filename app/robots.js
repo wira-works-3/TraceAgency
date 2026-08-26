@@ -4,6 +4,6 @@ export default function robots() {
       userAgent: "*",
       allow: "/",
     },
-    sitemap: "https://traceagency.com/sitemap.xml",
+    sitemap: "https://sewaspg.com/sitemap.xml",
   };
 }
